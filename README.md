@@ -10,6 +10,14 @@ define message formats. This approach provides convenience similar to Gob
 encoding, but with a widely-used and language-neutral wire format. For general
 information on Protocol buffers see http://protobuf.googlecode.com.
 
+## Features
+
+- Reflection-based encoding and decoding to/from protocol buffer wire format.
+- Use Go struct field tags to control protobuf fields (ID, optional/required, names).
+- Generate `.proto` files from Go structures.
+
+## Details
+
 In contrast with goprotobuf, this package does not require users to write or
 compile .proto files; you just define the message formats you want as Go
 struct types. Consider for example this example message format definition from
