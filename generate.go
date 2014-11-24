@@ -10,7 +10,7 @@ import (
 
 const protoTemplate = `[[range .Types]]
 message [[.Name]] {[[range .|Fields]]
-  [[.|TypeName]] [[.|FieldName]] = [[.ID]];[[end]]
+  [[.|TypeName]] [[.|FieldName]] = [[.ID]][[.|Options]];[[end]]
 }
 [[end]]
 `
@@ -110,6 +110,19 @@ func innerTypeName(t reflect.Type) string {
 	}
 }
 
+func options(f ProtoField) string {
+	if f.Field.Type.Kind() == reflect.Slice {
+		switch f.Field.Type.Elem().Kind() {
+		case reflect.Bool,
+			reflect.Int32, reflect.Int64,
+			reflect.Uint32, reflect.Uint64,
+			reflect.Float32, reflect.Float64:
+			return " [packed=true]"
+		}
+	}
+	return ""
+}
+
 type FieldNamer func(ProtoField) string
 
 // GenerateProtobufDefinition generates a .proto file from a list of structs via reflection.
@@ -126,6 +139,7 @@ func GenerateProtobufDefinition(w io.Writer, types []interface{}, fieldNamer Fie
 		"Fields":    ProtoFields,
 		"FieldName": fieldNamer,
 		"TypeName":  typeName,
+		"Options":   options,
 	}).Delims("[[", "]]").Parse(protoTemplate))
 	return t.Execute(w, map[string]interface{}{
 		"Types": rt,
