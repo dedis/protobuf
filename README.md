@@ -2,7 +2,8 @@
 
 This is a fork of the
 [protobuf](https://github.com/DeDiS/crypto/tree/master/protobuf) package from
-[DeDiS/crypto](https://github.com/DeDiS/crypto).
+[DeDiS/crypto](https://github.com/DeDiS/crypto). As the original repository is
+licensed under the GPL, this package is also.
 
 Package protobuf implements Protocol Buffers reflectively using Go types to
 define message formats. This approach provides convenience similar to Gob
