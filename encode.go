@@ -1,14 +1,14 @@
 package protobuf
 
 import (
+	"bytes"
+	"encoding/binary"
+	"errors"
 	"fmt"
 	"math"
-	"bytes"
 	"reflect"
-	"encoding/binary"
-	"github.com/dedis/crypto/abstract"
+	"time"
 )
-
 
 // Message fields declared to have exactly this type
 // will be transmitted as fixed-size 32-bit unsigned integers.
@@ -26,12 +26,10 @@ type Sfixed32 int32
 // will be transmitted as fixed-size 64-bit signed integers.
 type Sfixed64 int64
 
-
 // Protobufs enums are transmitted as unsigned varints;
 // using this type alias is optional but recommended
 // to ensure they get the correct type.
 type Enum uint32
-
 
 type encoder struct {
 	bytes.Buffer
@@ -39,30 +37,48 @@ type encoder struct {
 
 // Encode a Go struct into protocol buffer format.
 // The caller must pass a pointer to the struct to encode.
-func Encode(structPtr interface{}) []byte {
+func Encode(structPtr interface{}) (bytes []byte, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = errors.New(e.(string))
+			bytes = nil
+		}
+	}()
+	if structPtr == nil {
+		return nil, nil
+	}
 	en := encoder{}
 	en.message(reflect.ValueOf(structPtr).Elem())
-	return en.Bytes()
+	return en.Bytes(), nil
 }
 
 func (en *encoder) message(sval reflect.Value) {
-
+	var index *ProtoField
+	defer func() {
+		if r := recover(); r != nil {
+			if index != nil {
+				panic(fmt.Sprintf("%s (field %s)", r, index.Field.Name))
+			} else {
+				panic(r)
+			}
+		}
+	}()
 	// Encode all fields in-order
-	nfield := sval.NumField()
-	var idx [1]int
-	for i := 0; i < nfield; i++ {
-		idx[0] = i
-		field := sval.FieldByIndex(idx[:])
-		key := uint64(1+i) << 3
+	for _, index = range ProtoFields(sval.Type()) {
+		field := sval.FieldByIndex(index.Index)
+		key := uint64(index.ID) << 3
 		//fmt.Printf("field %d: %s %v\n", 1+i,
 		//		sval.Type().Field(i).Name, field.CanSet())
-		if field.CanSet() {		// Skip blank/padding fields
-			en.value(key, field)
+		if field.CanSet() { // Skip blank/padding fields
+			en.value(key, field, index.Prefix)
 		}
 	}
 }
 
-func (en *encoder) value(key uint64, val reflect.Value) {
+var timeType = reflect.TypeOf(time.Time{})
+var durationType = reflect.TypeOf(time.Duration(0))
+
+func (en *encoder) value(key uint64, val reflect.Value, prefix TagPrefix) {
 
 	// Non-reflectively handle some of the fixed types
 	switch v := val.Interface().(type) {
@@ -83,6 +99,12 @@ func (en *encoder) value(key uint64, val reflect.Value) {
 	case int32:
 		en.uvarint(key | 0)
 		en.svarint(int64(v))
+		return
+
+	case time.Time: // Encode time.Time as sfixed64
+		t := v.UnixNano()
+		en.uvarint(key | 1)
+		en.u64(uint64(t))
 		return
 
 	case int64:
@@ -138,10 +160,17 @@ func (en *encoder) value(key uint64, val reflect.Value) {
 		return
 
 	case []byte:
+		if v == nil {
+			if prefix != TagOptional {
+				panic("passed nil []byte to required field")
+			}
+			return
+		}
 		en.uvarint(key | 2)
 		en.uvarint(uint64(len(v)))
 		en.Write(v)
 		return
+
 	}
 	//fmt.Printf("type %s\n",val.Type().Name())
 
@@ -159,12 +188,12 @@ func (en *encoder) value(key uint64, val reflect.Value) {
 
 	// Varint-encoded 32-bit and 64-bit signed integers.
 	// Note that protobufs don't support 8- or 16-bit ints.
-	case reflect.Int,reflect.Int32,reflect.Int64:
+	case reflect.Int, reflect.Int32, reflect.Int64:
 		en.uvarint(key | 0)
 		en.svarint(val.Int())
 
 	// Varint-encoded 32-bit and 64-bit unsigned integers.
-	case reflect.Uint32,reflect.Uint64:
+	case reflect.Uint32, reflect.Uint64:
 		en.uvarint(key | 0)
 		en.uvarint(val.Uint())
 
@@ -186,7 +215,7 @@ func (en *encoder) value(key uint64, val reflect.Value) {
 		en.Write(b)
 
 	// Embedded messages.
-	case reflect.Struct:	// embedded message
+	case reflect.Struct: // embedded message
 		en.uvarint(key | 2)
 		emb := encoder{}
 		emb.message(val)
@@ -202,28 +231,31 @@ func (en *encoder) value(key uint64, val reflect.Value) {
 	// Optional field: encode only if pointer is non-nil.
 	case reflect.Ptr:
 		if val.IsNil() {
+			if prefix == TagRequired {
+				panic("required field is nil")
+			}
 			return
 		}
-		en.value(key, val.Elem())
+		en.value(key, val.Elem(), prefix)
 
 	// Abstract interface field.
-	case reflect.Interface:	
+	case reflect.Interface:
 		if val.IsNil() {
 			return
 		}
 
 		// If the object support self-encoding, use that.
-		if enc,ok := val.Interface().(abstract.Encoding); ok {
+		if enc, ok := val.Interface().(Encoding); ok {
 			en.uvarint(key | 2)
 			en.Write(enc.Encode())
 			return
 		}
 
 		// Encode from the object the interface points to.
-		en.value(key, val.Elem())
+		en.value(key, val.Elem(), prefix)
 
 	default:
-		panic(fmt.Sprintf("unsupported field Kind %d",val.Kind()))
+		panic(fmt.Sprintf("unsupported field Kind %d", val.Kind()))
 	}
 }
 
@@ -292,14 +324,14 @@ func (en *encoder) slice(key uint64, slval reflect.Value) {
 			packed.u64(math.Float64bits(slt[i]))
 		}
 
-	case []byte:	// Write the whole byte-slice as one key,value pair
+	case []byte: // Write the whole byte-slice as one key,value pair
 		en.uvarint(key | 2)
 		en.uvarint(uint64(sllen))
 		en.Write(slt)
 		return
 
-	default:	// We'll need to use the reflective path
-		en.sliceReflect(key,slval)
+	default: // We'll need to use the reflective path
+		en.sliceReflect(key, slval)
 		return
 	}
 
@@ -330,12 +362,12 @@ func (en *encoder) sliceReflect(key uint64, slval reflect.Value) {
 			packed.uvarint(v)
 		}
 
-	case reflect.Int,reflect.Int32,reflect.Int64:
+	case reflect.Int, reflect.Int32, reflect.Int64:
 		for i := 0; i < sllen; i++ {
 			packed.svarint(slval.Index(i).Int())
 		}
 
-	case reflect.Uint32,reflect.Uint64:
+	case reflect.Uint32, reflect.Uint64:
 		for i := 0; i < sllen; i++ {
 			packed.uvarint(slval.Index(i).Uint())
 		}
@@ -343,7 +375,7 @@ func (en *encoder) sliceReflect(key uint64, slval reflect.Value) {
 	case reflect.Float32:
 		for i := 0; i < sllen; i++ {
 			packed.u32(math.Float32bits(
-					float32(slval.Index(i).Float())))
+				float32(slval.Index(i).Float())))
 		}
 
 	case reflect.Float64:
@@ -351,16 +383,16 @@ func (en *encoder) sliceReflect(key uint64, slval reflect.Value) {
 			packed.u64(math.Float64bits(slval.Index(i).Float()))
 		}
 
-	case reflect.Uint8:	// Write the byte-slice as one key,value pair
+	case reflect.Uint8: // Write the byte-slice as one key,value pair
 		en.uvarint(key | 2)
 		en.uvarint(uint64(sllen))
 		b := slval.Convert(bytesType).Interface().([]byte)
 		en.Write(b)
 		return
 
-	default:	// Write each element as a separate key,value pair
+	default: // Write each element as a separate key,value pair
 		for i := 0; i < sllen; i++ {
-			en.value(key, slval.Index(i))
+			en.value(key, slval.Index(i), TagNone)
 		}
 		return
 	}
@@ -374,7 +406,7 @@ func (en *encoder) sliceReflect(key uint64, slval reflect.Value) {
 
 func (en *encoder) uvarint(v uint64) {
 	var b [binary.MaxVarintLen64]byte
-	n := binary.PutUvarint(b[:],v)
+	n := binary.PutUvarint(b[:], v)
 	en.Write(b[:n])
 }
 
@@ -407,4 +439,3 @@ func (en *encoder) u64(v uint64) {
 	b[7] = byte(v >> 56)
 	en.Write(b[:])
 }
-
