@@ -3,6 +3,7 @@ package protobuf
 import (
 	"bytes"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -73,6 +74,25 @@ message Person {
 message PhoneNumber {
   required string number = 1;
   optional uint32 type = 2;
+}
+
+`
+	assert.Equal(t, expected, w.String())
+}
+
+type TimeStruct struct {
+	Created time.Time
+	Delay   time.Duration
+}
+
+func TestGenerateTimeFields(t *testing.T) {
+	w := &bytes.Buffer{}
+	err := GenerateProtobufDefinition(w, []interface{}{TimeStruct{}}, nil)
+	assert.NoError(t, err)
+	expected := `
+message TimeStruct {
+  required sfixed64 created = 1;
+  required sint64 delay = 2;
 }
 
 `

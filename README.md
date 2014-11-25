@@ -15,6 +15,7 @@ information on Protocol buffers see http://protobuf.googlecode.com.
 - Reflection-based encoding and decoding to/from protocol buffer wire format.
 - Use Go struct field tags to control protobuf fields (ID, optional/required, names).
 - Generate `.proto` files from Go structures.
+- Encode `time.Time` as an `sfixed64` UnixNano.
 
 ## Details
 

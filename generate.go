@@ -72,8 +72,13 @@ func innerTypeName(t reflect.Type) string {
 	if t.Kind() == reflect.Slice && t.Elem().Kind() == reflect.Uint8 {
 		return "bytes"
 	}
-	if t.PkgPath() == "time" && (t.Name() == "Time" || t.Name() == "Duration") {
-		return "sint64"
+	if t.PkgPath() == "time" {
+		if t.Name() == "Time" {
+			return "sfixed64"
+		}
+		if t.Name() == "Duration" {
+			return "sint64"
+		}
 	}
 	switch t.Name() {
 	case "Ufixed32":
