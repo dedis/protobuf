@@ -4,6 +4,7 @@ import (
 	"io"
 	"reflect"
 	"regexp"
+	"sort"
 	"strings"
 	"text/template"
 )
@@ -125,13 +126,20 @@ func options(f ProtoField) string {
 
 type FieldNamer func(ProtoField) string
 
+type reflectedTypes []reflect.Type
+
+func (r reflectedTypes) Len() int           { return len(r) }
+func (r reflectedTypes) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
+func (r reflectedTypes) Less(i, j int) bool { return r[i].Name() < r[j].Name() }
+
 // GenerateProtobufDefinition generates a .proto file from a list of structs via reflection.
 // fieldNamer is a function that maps ProtoField types to generated protobuf field names.
 func GenerateProtobufDefinition(w io.Writer, types []interface{}, fieldNamer FieldNamer) error {
-	rt := []reflect.Type{}
+	rt := reflectedTypes{}
 	for _, t := range types {
 		rt = append(rt, reflect.Indirect(reflect.ValueOf(t)).Type())
 	}
+	sort.Sort(rt)
 	if fieldNamer == nil {
 		fieldNamer = fieldName
 	}
