@@ -10,7 +10,7 @@ import (
 
 func TestGenerate(t *testing.T) {
 	w := &bytes.Buffer{}
-	err := GenerateProtobufDefinition(w, []interface{}{test{}}, nil)
+	err := GenerateProtobufDefinition(w, []interface{}{test{}}, nil, nil)
 	assert.NoError(t, err)
 	expected := `
 message test {
@@ -61,7 +61,7 @@ message test {
 
 func TestGeneratePersonExample(t *testing.T) {
 	w := &bytes.Buffer{}
-	err := GenerateProtobufDefinition(w, []interface{}{Person{}, PhoneNumber{}}, nil)
+	err := GenerateProtobufDefinition(w, []interface{}{Person{}, PhoneNumber{}}, nil, nil)
 	assert.NoError(t, err)
 	expected := `
 message Person {
@@ -87,12 +87,45 @@ type TimeStruct struct {
 
 func TestGenerateTimeFields(t *testing.T) {
 	w := &bytes.Buffer{}
-	err := GenerateProtobufDefinition(w, []interface{}{TimeStruct{}}, nil)
+	err := GenerateProtobufDefinition(w, []interface{}{TimeStruct{}}, nil, nil)
 	assert.NoError(t, err)
 	expected := `
 message TimeStruct {
   required sfixed64 created = 1;
   required sint64 delay = 2;
+}
+
+`
+	assert.Equal(t, expected, w.String())
+}
+
+type EnumType uint32
+
+const (
+	EnumValueOne EnumType = iota
+	EnumValueTwo
+)
+
+type typeWithEnumField struct {
+	Value EnumType
+}
+
+func TestGenerateEnum(t *testing.T) {
+	w := &bytes.Buffer{}
+	err := GenerateProtobufDefinition(w, []interface{}{typeWithEnumField{}}, EnumMap{
+		"EnumValueOne": EnumValueOne,
+		"EnumValueTwo": EnumValueTwo,
+	}, nil)
+	assert.NoError(t, err)
+	expected := `
+enum EnumType {
+  ENUM_VALUE_ONE = 0;
+  ENUM_VALUE_TWO = 1;
+}
+
+
+message typeWithEnumField {
+  required EnumType value = 1;
 }
 
 `
