@@ -193,7 +193,10 @@ func GenerateProtobufDefinition(w io.Writer, types []interface{}, enumMap EnumMa
 		v := reflect.ValueOf(value)
 		t := v.Type()
 		if t.Kind() != reflect.Uint32 {
-			return fmt.Errorf("enum types must be uint32")
+			return fmt.Errorf("enum type aliases must be uint32")
+		}
+		if t.Name() == "uint32" {
+			return fmt.Errorf("enum value must be a type alias, but got uint32")
 		}
 		enums[t.Name()] = append(enums[t.Name()], enumValue{name, Enum(v.Uint())})
 	}
