@@ -113,8 +113,8 @@ type typeWithEnumField struct {
 func TestGenerateEnum(t *testing.T) {
 	w := &bytes.Buffer{}
 	err := GenerateProtobufDefinition(w, []interface{}{typeWithEnumField{}}, EnumMap{
-		"EnumValueOne": EnumValueOne,
 		"EnumValueTwo": EnumValueTwo,
+		"EnumValueOne": EnumValueOne,
 	}, nil)
 	assert.NoError(t, err)
 	expected := `

@@ -172,12 +172,18 @@ func (r reflectedTypes) Less(i, j int) bool { return r[i].Name() < r[j].Name() }
 
 type EnumMap map[string]interface{}
 
-type enumType struct {
+type enumValue struct {
 	Name  string
 	Value Enum
 }
 
-type enumTypeMap map[string][]enumType
+type enumValues []enumValue
+
+func (e enumValues) Len() int           { return len(e) }
+func (e enumValues) Swap(i, j int)      { e[i], e[j] = e[j], e[i] }
+func (e enumValues) Less(i, j int) bool { return e[i].Value < e[j].Value }
+
+type enumTypeMap map[string]enumValues
 
 // GenerateProtobufDefinition generates a .proto file from a list of structs via reflection.
 // fieldNamer is a function that maps ProtoField types to generated protobuf field names.
@@ -189,7 +195,10 @@ func GenerateProtobufDefinition(w io.Writer, types []interface{}, enumMap EnumMa
 		if t.Kind() != reflect.Uint32 {
 			return fmt.Errorf("enum types must be uint32")
 		}
-		enums[t.Name()] = append(enums[t.Name()], enumType{name, Enum(v.Uint())})
+		enums[t.Name()] = append(enums[t.Name()], enumValue{name, Enum(v.Uint())})
+	}
+	for _, values := range enums {
+		sort.Sort(values)
 	}
 	rt := reflectedTypes{}
 	for _, t := range types {
