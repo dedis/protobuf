@@ -1,6 +1,7 @@
 package protobuf
 
 import (
+	"encoding"
 	"encoding/binary"
 	"errors"
 	"math"
@@ -273,8 +274,14 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 		}
 
 		// If the object support self-decoding, use that.
-		enc, ok := val.Interface().(Encoding)
-		if ok {
+		if enc, ok := val.Interface().(encoding.BinaryUnmarshaler); ok {
+			if wiretype != 2 {
+				return errors.New(
+					"bad wiretype for bytes")
+			}
+			return enc.UnmarshalBinary(vb)
+		}
+		if enc, ok := val.Interface().(Encoding); ok {
 			if wiretype != 2 {
 				return errors.New(
 					"bad wiretype for bytes")

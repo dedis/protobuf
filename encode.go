@@ -2,6 +2,7 @@ package protobuf
 
 import (
 	"bytes"
+	"encoding"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -245,6 +246,15 @@ func (en *encoder) value(key uint64, val reflect.Value, prefix TagPrefix) {
 		}
 
 		// If the object support self-encoding, use that.
+		if enc, ok := val.Interface().(encoding.BinaryMarshaler); ok {
+			en.uvarint(key | 2)
+			bytes, err := enc.MarshalBinary()
+			if err != nil {
+				panic(err.Error())
+			}
+			en.Write(bytes)
+			return
+		}
 		if enc, ok := val.Interface().(Encoding); ok {
 			en.uvarint(key | 2)
 			en.Write(enc.Encode())
