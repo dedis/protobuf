@@ -16,6 +16,7 @@ information on Protocol buffers see http://protobuf.googlecode.com.
 - Use Go struct field tags to control protobuf fields (ID, optional/required, names).
 - Generate `.proto` files from Go structures.
 - Encode `time.Time` as an `sfixed64` UnixNano.
+- Support for enums.
 
 ## Details
 
@@ -58,9 +59,9 @@ type Person struct {
 
 type PhoneType uint32
 const (
-  MOBILE PhoneType = iota
-  HOME
-  WORK
+  MobilePhone PhoneType = iota
+  HomePhone
+  WorkPhone
 )
 
 type PhoneNumber struct {
@@ -195,7 +196,16 @@ this as an exercise for the reader.
 `GenerateProtobufDefinition()` function. The following:
 
 ```go
-GenerateProtobufDefinition(w, []interface{}{Person{}, PhoneNumber{}}, nil)
+types := []interface{}{
+  Person{},
+  PhoneNumber{},
+}
+enums := EnumMap{
+  "MobilePhone": MobilePhone,
+  "HomePhone": HomePhone,
+  "WorkPhone": WorkPhone,
+}
+GenerateProtobufDefinition(w, types, enums, nil)
 ```
 
 Will generate:
@@ -213,3 +223,5 @@ message PhoneNumber {
   optional uint32 type = 2;
 }
 ```
+
+Note: It can be quite tedious to manually synchronise the type and enum maps with the types in your package. I've found [pkgreflect](https://github.com/ungerik/pkgreflect) very useful for automating this.
