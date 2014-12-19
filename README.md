@@ -177,6 +177,8 @@ sparse field numbering, or other more exotic features like extensions or
 oneof. If you need to interoperate with existing protobuf code using these
 features, then you should probably use goprotobuf, at least for those
 particular message formats.
+Many of these limitations could be fixed by creative use of
+struct tag metadata (see https://golang.org/ref/spec#Struct_types).
 
 Another downside of this reflective approach to protobuf implementation is
 that reflective code is generally less efficient than statically generated
