@@ -281,13 +281,6 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 			}
 			return enc.UnmarshalBinary(vb)
 		}
-		if enc, ok := val.Interface().(Encoding); ok {
-			if wiretype != 2 {
-				return errors.New(
-					"bad wiretype for bytes")
-			}
-			return enc.Decode(vb)
-		}
 
 		// Decode into the object the interface points to.
 		// XXX perhaps better ONLY to support self-decoding
