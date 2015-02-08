@@ -1,14 +1,14 @@
 package protobuf
 
 import (
-	"fmt"
-	"testing"
-
+	"encoding"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 type Number interface {
-	Encoding
+	encoding.BinaryMarshaler
+	encoding.BinaryUnmarshaler
 
 	Value() int
 }
@@ -29,28 +29,22 @@ func (i *Int) Value() int {
 	return i.N
 }
 
-func (i *Int) String() string {
-	return fmt.Sprintf("Int: %d", i.N)
+func (i *Int) MarshalBinary() ([]byte, error) {
+	return []byte{byte(i.N)}, nil
 }
 
-func (i *Int) Len() int {
-	return 1
-}
-
-func (i *Int) Encode() []byte {
-	return []byte{byte(i.N)}
-}
-
-func (i *Int) Decode(data []byte) error {
+func (i *Int) UnmarshalBinary(data []byte) error {
 	i.N = int(data[0])
 	return nil
 }
 
-var _ Encoding = (*Int)(nil)
+// Check at compile time that we satisfy the interfaces.
+var _ encoding.BinaryMarshaler = (*Int)(nil)
+var _ encoding.BinaryUnmarshaler = (*Int)(nil)
 
 // Validate that support for self-encoding via the Encoding
 // interface works as expected
-func TestEncoding(t *testing.T) {
+func TestBinaryMarshaler(t *testing.T) {
 	wrapper := Wrapper{NewNumber(99)}
 	buf, err := Encode(&wrapper)
 	assert.Nil(t, err)

@@ -252,13 +252,8 @@ func (en *encoder) value(key uint64, val reflect.Value, prefix TagPrefix) {
 			if err != nil {
 				panic(err.Error())
 			}
+			en.uvarint(uint64(len(bytes)))
 			en.Write(bytes)
-			return
-		}
-		if enc, ok := val.Interface().(Encoding); ok {
-			en.uvarint(key | 2)
-			en.uvarint(uint64(enc.Len()))
-			en.Write(enc.Encode())
 			return
 		}
 
