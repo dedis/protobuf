@@ -20,10 +20,10 @@ import (
 // dynamic instantiation of Point and Secret objects of the concrete type
 // appropriate for a given abstract.Suite.
 //
-type Constructors map[reflect.Type]func() interface{}
+type Constructors func(reflect.Type) interface{}
 
 type decoder struct {
-	nm map[reflect.Type]func() interface{}
+	cons Constructors
 }
 
 // Decode a protocol buffer into a Go struct.
@@ -34,17 +34,21 @@ type decoder struct {
 // If required fields are missing, then the corresponding fields
 // will be left unmodified, meaning they will take on
 // their default Go zero values if Decode() is passed a fresh struct.
-func Decode(buf []byte, structPtr interface{}) error {
-	return DecodeWithConstructors(buf, structPtr, nil)
-}
-
-// DecodeWithConstructors is like Decode, but you can pass a map of
-// constructors with which to instantiate interface types.
-func DecodeWithConstructors(buf []byte, structPtr interface{}, cons Constructors) error {
+func Decode(buf []byte, structPtr interface{}, options ...interface{}) error {
 	if structPtr == nil {
 		return nil
 	}
-	de := decoder{map[reflect.Type]func() interface{}(cons)}
+	var cons Constructors
+	for _, opt := range options {
+		switch o := opt.(type) {
+		case Constructors:
+			cons = o
+		default:
+			return errors.New("Unknown Decode option: " +
+					reflect.TypeOf(o).String())
+		}
+	}
+	de := decoder{cons}
 	return de.message(buf, reflect.ValueOf(structPtr).Elem())
 }
 
@@ -299,11 +303,11 @@ func (de *decoder) instantiate(t reflect.Type) reflect.Value {
 
 	// If it's an interface type, lookup a dynamic constructor for it.
 	if t.Kind() == reflect.Interface {
-		newfunc, ok := de.nm[t]
-		if !ok {
-			panic("no constructor for interface " + t.String())
+		newval := de.cons(t)
+		if newval == nil {
+			panic("nil value constructed for interface " + t.String())
 		}
-		return reflect.ValueOf(newfunc())
+		return reflect.ValueOf(newval)
 	}
 
 	// Otherwise, for all concrete types, just instantiate directly.
