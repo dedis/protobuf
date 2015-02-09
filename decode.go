@@ -1,9 +1,11 @@
 package protobuf
 
 import (
+	"bytes"
 	"encoding"
 	"encoding/binary"
 	"errors"
+	"io"
 	"math"
 	"reflect"
 	"time"
@@ -26,7 +28,17 @@ type decoder struct {
 	cons Constructors
 }
 
-// Decode a protocol buffer into a Go struct.
+type reader interface {
+	io.Reader
+	io.ByteReader
+}
+
+// Convenience function for decoding from a byte slice.
+func Decode(buf []byte, structPtr interface{}, options ...interface{}) error {
+	return Read(bytes.NewBuffer(buf), structPtr, options...)
+}
+
+// Decode a protocol buffer into a Go struct by reading from io.Reader.
 // The caller must pass a pointer to the struct to decode into.
 //
 // Decode() currently does not explicitly check that all 'required' fields
@@ -34,7 +46,7 @@ type decoder struct {
 // If required fields are missing, then the corresponding fields
 // will be left unmodified, meaning they will take on
 // their default Go zero values if Decode() is passed a fresh struct.
-func Decode(buf []byte, structPtr interface{}, options ...interface{}) error {
+func Read(r reader, structPtr interface{}, options ...interface{}) error {
 	if structPtr == nil {
 		return nil
 	}
@@ -49,23 +61,25 @@ func Decode(buf []byte, structPtr interface{}, options ...interface{}) error {
 		}
 	}
 	de := decoder{cons}
-	return de.message(buf, reflect.ValueOf(structPtr).Elem())
+	return de.message(r, reflect.ValueOf(structPtr).Elem())
 }
 
 // Decode a Protocol Buffers message into a Go struct.
 // The Kind of the passed value v must be Struct.
-func (de *decoder) message(buf []byte, sval reflect.Value) error {
+func (de *decoder) message(r reader, sval reflect.Value) error {
 
 	// Decode all the fields
 	fields := ProtoFields(sval.Type())
 	fieldi := 0
-	for len(buf) > 0 {
+	for {
 		// Parse the key
-		key, n := binary.Uvarint(buf)
-		if n <= 0 {
+		key, err := binary.ReadUvarint(r)
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
 			return errors.New("bad protobuf field key")
 		}
-		buf = buf[n:]
 		wiretype := int(key & 7)
 		fieldnum := key >> 3
 
@@ -91,18 +105,16 @@ func (de *decoder) message(buf []byte, sval reflect.Value) error {
 		}
 
 		// Decode the field's value
-		rem, err := de.value(wiretype, buf, field)
-		if err != nil {
+		if err := de.value(wiretype, r, field); err != nil {
 			return err
 		}
-		buf = rem
 	}
 	return nil
 }
 
 // Pull a value from the buffer and put it into a reflective Value.
-func (de *decoder) value(wiretype int, buf []byte,
-	val reflect.Value) ([]byte, error) {
+func (de *decoder) value(wiretype int, r reader,
+	val reflect.Value) (err error) {
 
 	// Break out the value from the buffer based on the wire type
 	var v uint64
@@ -110,25 +122,27 @@ func (de *decoder) value(wiretype int, buf []byte,
 	var vb []byte
 	switch wiretype {
 	case 0: // varint
-		v, n = binary.Uvarint(buf)
-		if n <= 0 {
-			return nil, errors.New("bad protobuf varint value")
+		v, err = binary.ReadUvarint(r)
+		if err != nil {
+			return errors.New("bad protobuf varint value")
 		}
-		buf = buf[n:]
 
 	case 5: // 32-bit
-		if len(buf) < 4 {
-			return nil, errors.New("bad protobuf 64-bit value")
+		buf := make([]byte, 4)
+		n, err = r.Read(buf)
+		if n < 4 || err != nil {
+			return errors.New("bad protobuf 32-bit value")
 		}
 		v = uint64(buf[0]) |
 			uint64(buf[1])<<8 |
 			uint64(buf[2])<<16 |
 			uint64(buf[3])<<24
-		buf = buf[4:]
 
 	case 1: // 64-bit
-		if len(buf) < 8 {
-			return nil, errors.New("bad protobuf 64-bit value")
+		buf := make([]byte, 8)
+		n, err := r.Read(buf)
+		if n < 8 || err != nil {
+			return errors.New("bad protobuf 64-bit value")
 		}
 		v = uint64(buf[0]) |
 			uint64(buf[1])<<8 |
@@ -138,28 +152,31 @@ func (de *decoder) value(wiretype int, buf []byte,
 			uint64(buf[5])<<40 |
 			uint64(buf[6])<<48 |
 			uint64(buf[7])<<56
-		buf = buf[8:]
 
 	case 2: // length-delimited
-		v, n = binary.Uvarint(buf)
-		if n <= 0 || v > uint64(len(buf)-n) {
-			return nil, errors.New(
+		v, err := binary.ReadUvarint(r)
+		if err != nil { //|| v > uint64(len(buf)-n) {
+			return errors.New(
 				"bad protobuf length-delimited value")
 		}
-		vb = buf[n : n+int(v)]
-		buf = buf[n+int(v):]
+		vb = make([]byte, int(v))
+		if n, err := r.Read(vb); n < int(v) || err != nil {
+			return errors.New(
+				"bad protobuf length-delimited value")
+		}
+
 
 	default:
-		return nil, errors.New("unknown protobuf wire-type")
+		return errors.New("unknown protobuf wire-type")
 	}
 
 	// We've gotten the value out of the buffer,
 	// now put it into the appropriate reflective Value.
 	if err := de.putvalue(wiretype, val, v, vb); err != nil {
-		return nil, err
+		return err
 	}
 
-	return buf, nil
+	return nil
 }
 
 func (d *decoder) decodeSignedInt(wiretype int, v uint64) (int64, error) {
@@ -254,7 +271,7 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 		if wiretype != 2 {
 			return errors.New("bad wiretype for embedded message")
 		}
-		return de.message(vb, val)
+		return de.message(bytes.NewBuffer(vb), val)
 
 	// Optional field
 	case reflect.Ptr:
@@ -364,13 +381,13 @@ func (de *decoder) slice(slval reflect.Value, vb []byte) error {
 	}
 
 	// Decode packed values from the buffer and append them to the slice.
-	for len(vb) > 0 {
-		rem, err := de.value(wiretype, vb, val)
+	vbr := bytes.NewBuffer(vb)
+	for vbr.Len() > 0 {
+		err := de.value(wiretype, vbr, val)
 		if err != nil {
 			return err
 		}
 		slval.Set(reflect.Append(slval, val))
-		vb = rem
 	}
 	return nil
 }

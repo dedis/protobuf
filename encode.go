@@ -37,6 +37,13 @@ type encoder struct {
 	io.Writer
 }
 
+// Encode a Go struct to a byte slice.
+func Encode(structPtr interface{}) (b []byte, err error) {
+	var buf bytes.Buffer
+	err = Write(&buf, structPtr)
+	return buf.Bytes(), err
+}
+
 // Encode a Go struct into protocol buffer format.
 // The caller must pass a pointer to the struct to encode
 // and an io.Writer to encode to.
@@ -52,13 +59,6 @@ func Write(w io.Writer, structPtr interface{}) (err error) {
 	en := encoder{w}
 	en.message(reflect.ValueOf(structPtr).Elem())
 	return nil
-}
-
-// Encode a Go struct to a byte slice.
-func Encode(structPtr interface{}) (b []byte, err error) {
-	var buf bytes.Buffer
-	err = Write(&buf, structPtr)
-	return buf.Bytes(), err
 }
 
 func (en *encoder) message(sval reflect.Value) {
