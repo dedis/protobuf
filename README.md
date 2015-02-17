@@ -1,14 +1,10 @@
 # Reflection-based Protocol Buffers
 
-This is a fork of the
-[protobuf](https://github.com/DeDiS/crypto/tree/master/protobuf) package from
-[DeDiS/crypto](https://github.com/DeDiS/crypto). As the original repository is
-licensed under the GPL, this package is also.
-
 Package protobuf implements Protocol Buffers reflectively using Go types to
 define message formats. This approach provides convenience similar to Gob
-encoding, but with a widely-used and language-neutral wire format. For general
-information on Protocol buffers see http://protobuf.googlecode.com.
+encoding, but with a widely-used and language-neutral wire format.
+For detailed API documentation see http://godoc.org/github.com/DeDiS/protobuf.
+For general information on Protocol buffers see http://protobuf.googlecode.com.
 
 ## Features
 
