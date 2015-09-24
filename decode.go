@@ -127,7 +127,7 @@ func (de *decoder) value(wiretype int, r reader, val reflect.Value) (err error) 
 
 	case 5: // 32-bit
 		buf := make([]byte, 4)
-		n, err = r.Read(buf)
+		n, err = io.ReadFull(r, buf)
 		if n < 4 || err != nil {
 			return errors.New("bad protobuf 32-bit value")
 		}
@@ -138,7 +138,7 @@ func (de *decoder) value(wiretype int, r reader, val reflect.Value) (err error) 
 
 	case 1: // 64-bit
 		buf := make([]byte, 8)
-		n, err := r.Read(buf)
+		n, err := io.ReadFull(r, buf)
 		if n < 8 || err != nil {
 			return errors.New("bad protobuf 64-bit value")
 		}
@@ -158,7 +158,7 @@ func (de *decoder) value(wiretype int, r reader, val reflect.Value) (err error) 
 				"bad protobuf length-delimited value")
 		}
 		vb = make([]byte, int(v))
-		if n, err := r.Read(vb); n < int(v) || err != nil {
+		if n, err := io.ReadFull(r, vb); n < int(v) || err != nil {
 			return errors.New(
 				"bad protobuf length-delimited value")
 		}
