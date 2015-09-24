@@ -56,10 +56,10 @@ func (e Encoding) Decode(buf []byte, structPtr interface{}) error {
 // will be left unmodified, meaning they will take on
 // their default Go zero values if Decode() is passed a fresh struct.
 func (e Encoding) Read(r io.Reader, structPtr interface{}) error {
-	if e.cons == nil {
-		e.cons = &nulcons{}
+	if e.Constructor == nil {
+		e.Constructor = &nulcons{}
 	}
-	de := decoder{e.cons}
+	de := decoder{e.Constructor}
 	return de.message(bufio.NewReader(r), reflect.ValueOf(structPtr).Elem())
 }
 

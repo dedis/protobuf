@@ -12,42 +12,22 @@ import (
 	"time"
 )
 
-// Message fields declared to have exactly this type
-// will be transmitted as fixed-size 32-bit unsigned integers.
-type Ufixed32 uint32
-
-// Message fields declared to have exactly this type
-// will be transmitted as fixed-size 64-bit unsigned integers.
-type Ufixed64 uint64
-
-// Message fields declared to have exactly this type
-// will be transmitted as fixed-size 32-bit signed integers.
-type Sfixed32 int32
-
-// Message fields declared to have exactly this type
-// will be transmitted as fixed-size 64-bit signed integers.
-type Sfixed64 int64
-
-// Protobufs enums are transmitted as unsigned varints;
-// using this type alias is optional but recommended
-// to ensure they get the correct type.
-type Enum uint32
-
 type encoder struct {
 	io.Writer
 }
 
-// Encode a Go struct to a byte slice.
+// Encode a Go struct to a byte slice using the default protobufs encoding.
 func Encode(structPtr interface{}) (b []byte, err error) {
 	var buf bytes.Buffer
-	err = Write(&buf, structPtr)
+	err = Encoding{}.Write(&buf, structPtr)
 	return buf.Bytes(), err
 }
 
-// Encode a Go struct into protocol buffer format.
+// Write a Go struct to an io.Writer in protocol buffer format,
+// using the encoding options defined by e.
 // The caller must pass a pointer to the struct to encode
 // and an io.Writer to encode to.
-func Write(w io.Writer, structPtr interface{}) (err error) {
+func (e Encoding) Write(w io.Writer, structPtr interface{}) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = errors.New(e.(string))
@@ -59,6 +39,12 @@ func Write(w io.Writer, structPtr interface{}) (err error) {
 	en := encoder{w}
 	en.message(reflect.ValueOf(structPtr).Elem())
 	return nil
+}
+
+// Encode a Go struct to a byte slice,
+// using the encoding options defined by e.
+func (e Encoding) Encode(structPtr interface{}) (b []byte, err error) {
+	return Encode(structPtr)
 }
 
 func (en *encoder) message(sval reflect.Value) {

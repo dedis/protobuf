@@ -78,7 +78,7 @@ func (_ testCons) New(t reflect.Type) interface{} {
 
 func TestBinaryUnmarshalerWithCons(t *testing.T) {
 	w2 := new(Wrapper)
-	e := Encoding{cons: &testCons{}}
+	e := Encoding{ Constructor: &testCons{}}
 	err := e.Decode(testBuf, w2)
 
 	assert.Nil(t, err)
