@@ -1,6 +1,7 @@
 package protobuf
 
 import (
+	"bufio"
 	"bytes"
 	"encoding"
 	"encoding/binary"
@@ -11,21 +12,23 @@ import (
 	"time"
 )
 
-// Constructors represents a map defining how to instantiate any interface
-// types that Decode() might encounter while reading and decoding structured
-// data. The keys are reflect.Type values denoting interface types. The
-// corresponding values are functions expected to instantiate, and initialize
-// as necessary, an appropriate concrete object type supporting that
-// interface.
+// Constructor represents a generic constructor
+// that takes a reflect.Type, typically for an interface type,
+// and constructs some suitable concrete instance of that type.
 //
 // The Dissent crypto library uses this capability, for example, to support
-// dynamic instantiation of Point and Secret objects of the concrete type
-// appropriate for a given abstract.Suite.
+// dynamic instantiation of cryptographic objects of the concrete type
+// appropriate for a given cryptographic cipher suite.
 //
-type Constructors func(reflect.Type) interface{}
+type Constructor interface {
+	New(t reflect.Type) interface{}
+}
+
+type nulcons struct{}                            // a nul constructor
+func (_ nulcons) New(t reflect.Type) interface{} { return nil }
 
 type decoder struct {
-	cons Constructors
+	cons Constructor
 }
 
 type reader interface {
@@ -33,35 +36,31 @@ type reader interface {
 	io.ByteReader
 }
 
-// Convenience function for decoding from a byte slice.
-func Decode(buf []byte, structPtr interface{}, options ...interface{}) error {
-	return Read(bytes.NewBuffer(buf), structPtr, options...)
+// Decode a protocol buffer from a byte-slice into a Go struct
+// using the default protobufs encoding.
+func Decode(buf []byte, structPtr interface{}) error {
+	return Encoding{}.Decode(buf, structPtr)
 }
 
-// Decode a protocol buffer into a Go struct by reading from io.Reader.
-// The caller must pass a pointer to the struct to decode into.
+// Decode a protocol buffer from a byte-slice into a Go struct.
+func (e Encoding) Decode(buf []byte, structPtr interface{}) error {
+	return e.Read(bytes.NewReader(buf), structPtr)
+}
+
+// Read a protocol buffer into a Go struct by reading from io.Reader.
+// The caller must pass a pointer to the struct(s) to decode into.
 //
-// Decode() currently does not explicitly check that all 'required' fields
+// Read() currently does not explicitly check that all 'required' fields
 // are actually present in the input buffer being decoded.
 // If required fields are missing, then the corresponding fields
 // will be left unmodified, meaning they will take on
 // their default Go zero values if Decode() is passed a fresh struct.
-func Read(r reader, structPtr interface{}, options ...interface{}) error {
-	if structPtr == nil {
-		return nil
+func (e Encoding) Read(r io.Reader, structPtr interface{}) error {
+	if e.cons == nil {
+		e.cons = &nulcons{}
 	}
-	var cons Constructors
-	for _, opt := range options {
-		switch o := opt.(type) {
-		case Constructors:
-			cons = o
-		default:
-			return errors.New("Unknown Decode option: " +
-					reflect.TypeOf(o).String())
-		}
-	}
-	de := decoder{cons}
-	return de.message(r, reflect.ValueOf(structPtr).Elem())
+	de := decoder{e.cons}
+	return de.message(bufio.NewReader(r), reflect.ValueOf(structPtr).Elem())
 }
 
 // Decode a Protocol Buffers message into a Go struct.
@@ -113,8 +112,7 @@ func (de *decoder) message(r reader, sval reflect.Value) error {
 }
 
 // Pull a value from the buffer and put it into a reflective Value.
-func (de *decoder) value(wiretype int, r reader,
-	val reflect.Value) (err error) {
+func (de *decoder) value(wiretype int, r reader, val reflect.Value) (err error) {
 
 	// Break out the value from the buffer based on the wire type
 	var v uint64
@@ -164,7 +162,6 @@ func (de *decoder) value(wiretype int, r reader,
 			return errors.New(
 				"bad protobuf length-delimited value")
 		}
-
 
 	default:
 		return errors.New("unknown protobuf wire-type")
@@ -271,7 +268,7 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 		if wiretype != 2 {
 			return errors.New("bad wiretype for embedded message")
 		}
-		return de.message(bytes.NewBuffer(vb), val)
+		return de.message(bytes.NewReader(vb), val)
 
 	// Optional field
 	case reflect.Ptr:
@@ -320,11 +317,11 @@ func (de *decoder) instantiate(t reflect.Type) reflect.Value {
 
 	// If it's an interface type, lookup a dynamic constructor for it.
 	if t.Kind() == reflect.Interface {
-		newval := de.cons(t)
-		if newval == nil {
-			panic("nil value constructed for interface " + t.String())
+		obj := de.cons.New(t)
+		if obj == nil {
+			panic("no constructor for interface " + t.String())
 		}
-		return reflect.ValueOf(newval)
+		return reflect.ValueOf(obj)
 	}
 
 	// Otherwise, for all concrete types, just instantiate directly.
@@ -381,10 +378,9 @@ func (de *decoder) slice(slval reflect.Value, vb []byte) error {
 	}
 
 	// Decode packed values from the buffer and append them to the slice.
-	vbr := bytes.NewBuffer(vb)
+	vbr := bytes.NewReader(vb)
 	for vbr.Len() > 0 {
-		err := de.value(wiretype, vbr, val)
-		if err != nil {
+		if err := de.value(wiretype, vbr, val); err != nil {
 			return err
 		}
 		slval.Set(reflect.Append(slval, val))

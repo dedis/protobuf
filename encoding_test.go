@@ -65,19 +65,21 @@ func TestBinaryUnmarshaler(t *testing.T) {
 var aNumber Number
 var tNumber = reflect.TypeOf(&aNumber).Elem()
 
-var cons Constructors =
-	func(t reflect.Type) interface{} {
-		switch t {
-		case tNumber:
-			return new(Int)
-		default:
-			return nil
-		}
+type testCons struct{}
+
+func (_ testCons) New(t reflect.Type) interface{} {
+	switch t {
+	case tNumber:
+		return new(Int)
+	default:
+		return nil
 	}
+}
 
 func TestBinaryUnmarshalerWithCons(t *testing.T) {
 	w2 := new(Wrapper)
-	err := Decode(testBuf, w2, cons)
+	e := Encoding{cons: &testCons{}}
+	err := e.Decode(testBuf, w2)
 
 	assert.Nil(t, err)
 	assert.Equal(t, testNumber.Value(), w2.N.Value())
