@@ -9,21 +9,23 @@ import (
 	"time"
 )
 
-// Constructors represents a map defining how to instantiate any interface
-// types that Decode() might encounter while reading and decoding structured
-// data. The keys are reflect.Type values denoting interface types. The
-// corresponding values are functions expected to instantiate, and initialize
-// as necessary, an appropriate concrete object type supporting that
-// interface.
+// Constructor represents a generic constructor
+// that takes a reflect.Type, typically for an interface type,
+// and constructs some suitable concrete instance of that type.
 //
 // The Dissent crypto library uses this capability, for example, to support
-// dynamic instantiation of Point and Secret objects of the concrete type
-// appropriate for a given abstract.Suite.
+// dynamic instantiation of cryptographic objects of the concrete type
+// appropriate for a given cryptographic cipher suite.
 //
-type Constructors map[reflect.Type]func() interface{}
+type Constructor interface {
+	New(t reflect.Type) interface{}
+}
+
+type nulcons struct{}                            // a nul constructor
+func (_ nulcons) New(t reflect.Type) interface{} { return nil }
 
 type decoder struct {
-	nm map[reflect.Type]func() interface{}
+	cons Constructor
 }
 
 // Decode a protocol buffer into a Go struct.
@@ -35,16 +37,16 @@ type decoder struct {
 // will be left unmodified, meaning they will take on
 // their default Go zero values if Decode() is passed a fresh struct.
 func Decode(buf []byte, structPtr interface{}) error {
-	return DecodeWithConstructors(buf, structPtr, nil)
+	return DecodeWithConstructor(buf, structPtr, &nulcons{})
 }
 
-// DecodeWithConstructors is like Decode, but you can pass a map of
+// DecodeWithConstructor is like Decode, but you can pass a map of
 // constructors with which to instantiate interface types.
-func DecodeWithConstructors(buf []byte, structPtr interface{}, cons Constructors) error {
+func DecodeWithConstructor(buf []byte, structPtr interface{}, cons Constructor) error {
 	if structPtr == nil {
 		return nil
 	}
-	de := decoder{map[reflect.Type]func() interface{}(cons)}
+	de := decoder{cons}
 	return de.message(buf, reflect.ValueOf(structPtr).Elem())
 }
 
@@ -299,11 +301,11 @@ func (de *decoder) instantiate(t reflect.Type) reflect.Value {
 
 	// If it's an interface type, lookup a dynamic constructor for it.
 	if t.Kind() == reflect.Interface {
-		newfunc, ok := de.nm[t]
-		if !ok {
+		obj := de.cons.New(t)
+		if obj == nil {
 			panic("no constructor for interface " + t.String())
 		}
-		return reflect.ValueOf(newfunc())
+		return reflect.ValueOf(obj)
 	}
 
 	// Otherwise, for all concrete types, just instantiate directly.
