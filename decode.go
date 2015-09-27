@@ -1,6 +1,7 @@
 package protobuf
 
 import (
+	"fmt"
 	"bufio"
 	"bytes"
 	"encoding"
@@ -77,7 +78,8 @@ func (de *decoder) message(r reader, sval reflect.Value) error {
 			if err == io.EOF {
 				return nil
 			}
-			return errors.New("bad protobuf field key")
+			return errors.New(fmt.Sprintf(
+				"bad protobuf field key %d", key))
 		}
 		wiretype := int(key & 7)
 		fieldnum := key >> 3
@@ -116,20 +118,19 @@ func (de *decoder) value(wiretype int, r reader, val reflect.Value) (err error) 
 
 	// Break out the value from the buffer based on the wire type
 	var v uint64
-	var n int
 	var vb []byte
 	switch wiretype {
 	case 0: // varint
 		v, err = binary.ReadUvarint(r)
 		if err != nil {
-			return errors.New("bad protobuf varint value")
+			return err
 		}
 
 	case 5: // 32-bit
 		buf := make([]byte, 4)
-		n, err = io.ReadFull(r, buf)
-		if n < 4 || err != nil {
-			return errors.New("bad protobuf 32-bit value")
+		_, err = io.ReadFull(r, buf)
+		if err != nil {
+			return err
 		}
 		v = uint64(buf[0]) |
 			uint64(buf[1])<<8 |
@@ -138,9 +139,9 @@ func (de *decoder) value(wiretype int, r reader, val reflect.Value) (err error) 
 
 	case 1: // 64-bit
 		buf := make([]byte, 8)
-		n, err := io.ReadFull(r, buf)
-		if n < 8 || err != nil {
-			return errors.New("bad protobuf 64-bit value")
+		_, err := io.ReadFull(r, buf)
+		if err != nil {
+			return err
 		}
 		v = uint64(buf[0]) |
 			uint64(buf[1])<<8 |
@@ -153,18 +154,17 @@ func (de *decoder) value(wiretype int, r reader, val reflect.Value) (err error) 
 
 	case 2: // length-delimited
 		v, err := binary.ReadUvarint(r)
-		if err != nil { //|| v > uint64(len(buf)-n) {
-			return errors.New(
-				"bad protobuf length-delimited value")
+		if err != nil {
+			return err
 		}
 		vb = make([]byte, int(v))
-		if n, err := io.ReadFull(r, vb); n < int(v) || err != nil {
-			return errors.New(
-				"bad protobuf length-delimited value")
+		if _, err := io.ReadFull(r, vb); err != nil {
+			return err
 		}
 
 	default:
-		return errors.New("unknown protobuf wire-type")
+		return errors.New(fmt.Sprintf("unknown protobuf wire-type %d",
+					wiretype))
 	}
 
 	// We've gotten the value out of the buffer,
@@ -188,7 +188,8 @@ func (d *decoder) decodeSignedInt(wiretype int, v uint64) (int64, error) {
 	} else if wiretype == 1 { // sfixed64
 		return int64(v), nil
 	} else {
-		return -1, errors.New("bad wiretype for sint")
+		return -1, errors.New(fmt.Sprintf(
+				"bad wiretype %d for sint", wiretype))
 	}
 }
 
@@ -205,10 +206,12 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 	switch val.Kind() {
 	case reflect.Bool:
 		if wiretype != 0 {
-			return errors.New("bad wiretype for bool")
+			return errors.New(fmt.Sprintf(
+					"bad wiretype %d for bool", wiretype))
 		}
 		if v > 1 {
-			return errors.New("invalid bool value")
+			return errors.New(fmt.Sprintf(
+					"invalid bool value %d", v))
 		}
 		val.SetBool(v != 0)
 
@@ -230,27 +233,31 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 		} else if wiretype == 1 { // ufixed64
 			val.SetUint(uint64(v))
 		} else {
-			return errors.New("bad wiretype for uint")
+			return errors.New(fmt.Sprintf(
+					"bad wiretype %d for int", wiretype))
 		}
 
 	// Fixed-length 32-bit floats.
 	case reflect.Float32:
 		if wiretype != 5 {
-			return errors.New("bad wiretype for float32")
+			return errors.New(fmt.Sprintf(
+				"bad wiretype %d for float32", wiretype))
 		}
 		val.SetFloat(float64(math.Float32frombits(uint32(v))))
 
 	// Fixed-length 64-bit floats.
 	case reflect.Float64:
 		if wiretype != 1 {
-			return errors.New("bad wiretype for float64")
+			return errors.New(fmt.Sprintf(
+				"bad wiretype %d for float64", wiretype))
 		}
 		val.SetFloat(math.Float64frombits(v))
 
 	// Length-delimited string.
 	case reflect.String:
 		if wiretype != 2 {
-			return errors.New("bad wiretype for string")
+			return errors.New(fmt.Sprintf(
+				"bad wiretype %d for string", wiretype))
 		}
 		val.SetString(string(vb))
 
@@ -266,7 +273,9 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 			return nil
 		}
 		if wiretype != 2 {
-			return errors.New("bad wiretype for embedded message")
+			return errors.New(fmt.Sprintf(
+				"bad wiretype %d for embedded message",
+				wiretype))
 		}
 		return de.message(bytes.NewReader(vb), val)
 
@@ -274,28 +283,37 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 	case reflect.Ptr:
 		// Instantiate pointer's element type.
 		if val.IsNil() {
-			val.Set(de.instantiate(val.Type().Elem()))
+			obj, err := de.instantiate(val.Type().Elem())
+			if err != nil {
+				return err
+			}
+			val.Set(obj)
 		}
 		return de.putvalue(wiretype, val.Elem(), v, vb)
 
 	// Repeated field or byte-slice
 	case reflect.Slice:
 		if wiretype != 2 {
-			return errors.New("bad wiretype for repeated field")
+			return errors.New(fmt.Sprintf(
+				"bad wiretype %d for repeated field", wiretype))
 		}
 		return de.slice(val, vb)
 
 	case reflect.Interface:
 		// Abstract field: instantiate via dynamic constructor.
 		if val.IsNil() {
-			val.Set(de.instantiate(val.Type()))
+			obj, err := de.instantiate(val.Type())
+			if err != nil {
+				return err
+			}
+			val.Set(obj)
 		}
 
 		// If the object support self-decoding, use that.
 		if enc, ok := val.Interface().(encoding.BinaryUnmarshaler); ok {
 			if wiretype != 2 {
-				return errors.New(
-					"bad wiretype for bytes")
+				return errors.New(fmt.Sprintf(
+					"bad wiretype %d for bytes", wiretype))
 			}
 			return enc.UnmarshalBinary(vb)
 		}
@@ -313,19 +331,21 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 
 // Instantiate an arbitrary type, handling dynamic interface types.
 // Returns a Ptr value.
-func (de *decoder) instantiate(t reflect.Type) reflect.Value {
+func (de *decoder) instantiate(t reflect.Type) (reflect.Value, error) {
 
 	// If it's an interface type, lookup a dynamic constructor for it.
 	if t.Kind() == reflect.Interface {
 		obj := de.cons.New(t)
 		if obj == nil {
-			panic("no constructor for interface " + t.String())
+			return reflect.ValueOf(nil),
+				errors.New("no constructor for interface " +
+				t.String())
 		}
-		return reflect.ValueOf(obj)
+		return reflect.ValueOf(obj), nil
 	}
 
 	// Otherwise, for all concrete types, just instantiate directly.
-	return reflect.New(t)
+	return reflect.New(t), nil
 }
 
 var sfixed32type = reflect.TypeOf(Sfixed32(0))
