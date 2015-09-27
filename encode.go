@@ -6,51 +6,45 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"reflect"
 	"time"
 )
 
-// Message fields declared to have exactly this type
-// will be transmitted as fixed-size 32-bit unsigned integers.
-type Ufixed32 uint32
-
-// Message fields declared to have exactly this type
-// will be transmitted as fixed-size 64-bit unsigned integers.
-type Ufixed64 uint64
-
-// Message fields declared to have exactly this type
-// will be transmitted as fixed-size 32-bit signed integers.
-type Sfixed32 int32
-
-// Message fields declared to have exactly this type
-// will be transmitted as fixed-size 64-bit signed integers.
-type Sfixed64 int64
-
-// Protobufs enums are transmitted as unsigned varints;
-// using this type alias is optional but recommended
-// to ensure they get the correct type.
-type Enum uint32
-
 type encoder struct {
-	bytes.Buffer
+	io.Writer
 }
 
-// Encode a Go struct into protocol buffer format.
-// The caller must pass a pointer to the struct to encode.
-func Encode(structPtr interface{}) (bytes []byte, err error) {
+// Encode a Go struct to a byte slice using the default protobufs encoding.
+func Encode(structPtr interface{}) (b []byte, err error) {
+	var buf bytes.Buffer
+	err = Encoding{}.Write(&buf, structPtr)
+	return buf.Bytes(), err
+}
+
+// Write a Go struct to an io.Writer in protocol buffer format,
+// using the encoding options defined by e.
+// The caller must pass a pointer to the struct to encode
+// and an io.Writer to encode to.
+func (e Encoding) Write(w io.Writer, structPtr interface{}) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = errors.New(e.(string))
-			bytes = nil
 		}
 	}()
 	if structPtr == nil {
-		return nil, nil
+		return nil
 	}
-	en := encoder{}
+	en := encoder{w}
 	en.message(reflect.ValueOf(structPtr).Elem())
-	return en.Bytes(), nil
+	return nil
+}
+
+// Encode a Go struct to a byte slice,
+// using the encoding options defined by e.
+func (e Encoding) Encode(structPtr interface{}) (b []byte, err error) {
+	return Encode(structPtr)
 }
 
 func (en *encoder) message(sval reflect.Value) {
@@ -218,9 +212,9 @@ func (en *encoder) value(key uint64, val reflect.Value, prefix TagPrefix) {
 	// Embedded messages.
 	case reflect.Struct: // embedded message
 		en.uvarint(key | 2)
-		emb := encoder{}
+		emb := encoder{new(bytes.Buffer)}
 		emb.message(val)
-		b := emb.Bytes()
+		b := emb.Writer.(*bytes.Buffer).Bytes()
 		en.uvarint(uint64(len(b)))
 		en.Write(b)
 
@@ -269,7 +263,7 @@ func (en *encoder) slice(key uint64, slval reflect.Value) {
 
 	// First handle common cases with a direct typeswitch
 	sllen := slval.Len()
-	packed := encoder{}
+	packed := encoder{new(bytes.Buffer)}
 	switch slt := slval.Interface().(type) {
 	case []bool:
 		for i := 0; i < sllen; i++ {
@@ -343,7 +337,7 @@ func (en *encoder) slice(key uint64, slval reflect.Value) {
 
 	// Encode packed representation key/value pair
 	en.uvarint(key | 2)
-	b := packed.Bytes()
+	b := packed.Writer.(*bytes.Buffer).Bytes()
 	en.uvarint(uint64(len(b)))
 	en.Write(b)
 }
@@ -357,7 +351,7 @@ func (en *encoder) sliceReflect(key uint64, slval reflect.Value) {
 	}
 	sllen := slval.Len()
 	slelt := slval.Type().Elem()
-	packed := encoder{}
+	packed := encoder{new(bytes.Buffer)}
 	switch slelt.Kind() {
 	case reflect.Bool:
 		for i := 0; i < sllen; i++ {
@@ -405,7 +399,7 @@ func (en *encoder) sliceReflect(key uint64, slval reflect.Value) {
 
 	// Encode packed representation key/value pair
 	en.uvarint(key | 2)
-	b := packed.Bytes()
+	b := packed.Writer.(*bytes.Buffer).Bytes()
 	en.uvarint(uint64(len(b)))
 	en.Write(b)
 }
