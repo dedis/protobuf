@@ -4,6 +4,7 @@ import (
 	"encoding"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"math"
 	"reflect"
 	"time"
@@ -87,6 +88,7 @@ func (de *decoder) message(buf []byte, sval reflect.Value) error {
 		}
 
 		// Decode the field's value
+		fmt.Println("Decode Field", field, "(rest", len(buf), "bytes)")
 		rem, err := de.value(wiretype, buf, field)
 		if err != nil {
 			return err
@@ -99,7 +101,6 @@ func (de *decoder) message(buf []byte, sval reflect.Value) error {
 // Pull a value from the buffer and put it into a reflective Value.
 func (de *decoder) value(wiretype int, buf []byte,
 	val reflect.Value) ([]byte, error) {
-
 	// Break out the value from the buffer based on the wire type
 	var v uint64
 	var n int
@@ -181,6 +182,7 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 	// or an in-range but blank (padding) field in the struct.
 	// In this case, simply ignore and discard the field's content.
 	if !val.CanSet() {
+		fmt.Println("Decode CAN NOT SET:", val, val.Type(), val.Kind())
 		return nil
 	}
 
