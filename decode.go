@@ -55,15 +55,11 @@ func DecodeWithConstructors(buf []byte, structPtr interface{}, cons Constructors
 	}
 	de := decoder{cons}
 	val := reflect.ValueOf(structPtr)
-	// if its a pointer get the elemn pointed
-	if val.Kind() == reflect.Ptr {
-		val = val.Elem()
-		// it can also be a interface, that way we leave things as it. But if it
-		// is not a pointer nor interface, we must return an error
-	} else {
+	// if its NOT a pointer, it is bad return an error
+	if val.Kind() != reflect.Ptr {
 		return errors.New("Decode has been given a non pointer type")
 	}
-	return de.message(buf, val)
+	return de.message(buf, val.Elem())
 }
 
 // Decode a Protocol Buffers message into a Go struct.
@@ -104,7 +100,6 @@ func (de *decoder) message(buf []byte, sval reflect.Value) error {
 		}
 
 		// Decode the field's value
-		//fmt.Println("Decode Field", field.Kind())
 		rem, err := de.value(wiretype, buf, field)
 		if err != nil {
 			return err
@@ -197,7 +192,6 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 	// or an in-range but blank (padding) field in the struct.
 	// In this case, simply ignore and discard the field's content.
 	if !val.CanSet() {
-		//fmt.Println("Decode CAN NOT SET:", val, val.Type(), val.Kind())
 		return nil
 	}
 
@@ -318,7 +312,7 @@ func (de *decoder) instantiate(t reflect.Type) reflect.Value {
 	if t.Kind() == reflect.Interface {
 		newfunc, ok := de.nm[t]
 		if !ok {
-			panic("no constructor for interface " + t.String() + "only" + de.nm.String())
+			panic("no constructor for interface " + t.String())
 		}
 		return reflect.ValueOf(newfunc())
 	}

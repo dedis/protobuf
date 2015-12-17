@@ -69,8 +69,7 @@ func (en *encoder) message(sval reflect.Value) {
 		}
 	}()
 	// Encode all fields in-order
-	fields := ProtoFields(sval.Type())
-	for _, index = range fields {
+	for _, index = range ProtoFields(sval.Type()) {
 		field := sval.FieldByIndex(index.Index)
 		key := uint64(index.ID) << 3
 		//fmt.Printf("field %d: %s %v\n", 1+i,
