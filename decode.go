@@ -23,8 +23,16 @@ import (
 //
 type Constructors map[reflect.Type]func() interface{}
 
+func (c *Constructors) String() string {
+	var s string
+	for k, v := range *c {
+		s += k.String() + "=>" + fmt.Sprintf("%+v", v) + "\t"
+	}
+	return s
+}
+
 type decoder struct {
-	nm map[reflect.Type]func() interface{}
+	nm Constructors
 }
 
 // Decode a protocol buffer into a Go struct.
@@ -45,14 +53,22 @@ func DecodeWithConstructors(buf []byte, structPtr interface{}, cons Constructors
 	if structPtr == nil {
 		return nil
 	}
-	de := decoder{map[reflect.Type]func() interface{}(cons)}
-	return de.message(buf, reflect.ValueOf(structPtr).Elem())
+	de := decoder{cons}
+	val := reflect.ValueOf(structPtr)
+	// if its a pointer get the elemn pointed
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+		// it can also be a interface, that way we leave things as it. But if it
+		// is not a pointer nor interface, we must return an error
+	} else {
+		return errors.New("Decode has been given a non pointer type")
+	}
+	return de.message(buf, val)
 }
 
 // Decode a Protocol Buffers message into a Go struct.
 // The Kind of the passed value v must be Struct.
 func (de *decoder) message(buf []byte, sval reflect.Value) error {
-
 	// Decode all the fields
 	fields := ProtoFields(sval.Type())
 	fieldi := 0
@@ -88,7 +104,7 @@ func (de *decoder) message(buf []byte, sval reflect.Value) error {
 		}
 
 		// Decode the field's value
-		fmt.Println("Decode Field", field, "(rest", len(buf), "bytes)")
+		//fmt.Println("Decode Field", field.Kind())
 		rem, err := de.value(wiretype, buf, field)
 		if err != nil {
 			return err
@@ -155,7 +171,6 @@ func (de *decoder) value(wiretype int, buf []byte,
 	if err := de.putvalue(wiretype, val, v, vb); err != nil {
 		return nil, err
 	}
-
 	return buf, nil
 }
 
@@ -182,7 +197,7 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 	// or an in-range but blank (padding) field in the struct.
 	// In this case, simply ignore and discard the field's content.
 	if !val.CanSet() {
-		fmt.Println("Decode CAN NOT SET:", val, val.Type(), val.Kind())
+		//fmt.Println("Decode CAN NOT SET:", val, val.Type(), val.Kind())
 		return nil
 	}
 
@@ -303,7 +318,7 @@ func (de *decoder) instantiate(t reflect.Type) reflect.Value {
 	if t.Kind() == reflect.Interface {
 		newfunc, ok := de.nm[t]
 		if !ok {
-			panic("no constructor for interface " + t.String())
+			panic("no constructor for interface " + t.String() + "only" + de.nm.String())
 		}
 		return reflect.ValueOf(newfunc())
 	}

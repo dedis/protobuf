@@ -50,10 +50,10 @@ func Encode(structPtr interface{}) (bytes []byte, err error) {
 	}
 	en := encoder{}
 	val := reflect.ValueOf(structPtr)
-	if val.Kind() == reflect.Ptr {
-		val = val.Elem()
+	if val.Kind() != reflect.Ptr {
+		return nil, fmt.Errorf("Encode takes a pointer to struct")
 	}
-	en.message(val)
+	en.message(val.Elem())
 	return en.Bytes(), nil
 }
 
@@ -75,9 +75,9 @@ func (en *encoder) message(sval reflect.Value) {
 		key := uint64(index.ID) << 3
 		//fmt.Printf("field %d: %s %v\n", 1+i,
 		//		sval.Type().Field(i).Name, field.CanSet())
-		//if field.CanSet() { // Skip blank/padding fields
-		en.value(key, field, index.Prefix)
-		//}
+		if field.CanSet() { // Skip blank/padding fields
+			en.value(key, field, index.Prefix)
+		}
 	}
 }
 
@@ -85,10 +85,6 @@ var timeType = reflect.TypeOf(time.Time{})
 var durationType = reflect.TypeOf(time.Duration(0))
 
 func (en *encoder) value(key uint64, val reflect.Value, prefix TagPrefix) {
-	if !val.CanSet() {
-		fmt.Println("Encode Can NOT SET:", val.Type(), val.Kind(), val, val.CanSet(), val.CanAddr())
-		return
-	}
 	// Non-reflectively handle some of the fixed types
 	switch v := val.Interface().(type) {
 	case bool:

@@ -79,6 +79,7 @@ func ProtoFields(t reflect.Type) []*ProtoField {
 }
 
 func innerFieldIndexes(id *int, v reflect.Type) []*ProtoField {
+	//fmt.Println("DecodeFieldIndex", v, v.Kind())
 	if v.Kind() == reflect.Ptr {
 		return innerFieldIndexes(id, v.Elem())
 	}
