@@ -17,7 +17,7 @@ type MessageWithMap struct {
 	//StructMapping map[string]Inner
 }
 
-func TestMapFieldMarshal(t *testing.T) {
+func TestMapFieldEncode(t *testing.T) {
 	m := &MessageWithMap{
 		NameMapping: map[int32]string{
 			1: "Rob",
@@ -25,9 +25,10 @@ func TestMapFieldMarshal(t *testing.T) {
 			8: "Dave",
 		},
 	}
+
 	b, err := Encode(m)
 	if err != nil {
-		t.Fatalf("Marshal: %v", err)
+		t.Fatalf("Encode: %v", err)
 	}
 
 	// b should be the concatenation of these three byte sequences in some order.
@@ -55,7 +56,7 @@ func TestMapFieldMarshal(t *testing.T) {
 		}
 	}
 	if !ok {
-		t.Fatalf("Incorrect Marshal output.\n got %q\nwant %q (or a permutation of that)", b, parts[0]+parts[1]+parts[2])
+		t.Fatalf("Incorrect Encoding output.\n got %q\nwant %q (or a permutation of that)", b, parts[0]+parts[1]+parts[2])
 	}
 	t.Logf("FYI b: %q", b)
 
@@ -83,6 +84,7 @@ func TestMapFieldRoundTrips(t *testing.T) {
 	}
 	t.Logf("FYI b: %q", b)
 	m2 := new(MessageWithMap)
+	// First fix the encoding:
 	if err := Decode(b, m2); err != nil {
 		t.Fatalf("Decode: %v", err)
 	}

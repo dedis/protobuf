@@ -9,6 +9,7 @@ import (
 	"math"
 	"reflect"
 	"time"
+	"unsafe"
 )
 
 // Message fields declared to have exactly this type
@@ -263,6 +264,10 @@ func (en *encoder) value(key uint64, val reflect.Value, prefix TagPrefix) {
 		// Encode from the object the interface points to.
 		en.value(key, val.Elem(), prefix)
 
+	case reflect.Map:
+		en.map_(key, val)
+		return
+
 	default:
 		panic(fmt.Sprintf("unsupported field Kind %d", val.Kind()))
 	}
@@ -349,6 +354,37 @@ func (en *encoder) slice(key uint64, slval reflect.Value) {
 	b := packed.Bytes()
 	en.uvarint(uint64(len(b)))
 	en.Write(b)
+}
+
+func (en *encoder) map_(key uint64, mpval reflect.Value) {
+
+	//keycopy, valcopy, keybase, valbase := mapEncodeScratch(mpval.Type())
+	keycopy, valcopy, _, _ := mapEncodeScratch(mpval.Type())
+
+	for _, mkey := range mpval.MapKeys() {
+		val := mpval.MapIndex(mkey)
+
+		// The only illegal map entry values are nil message pointers.
+		if val.Kind() == reflect.Ptr && val.IsNil() {
+			panic("proto: map has nil element")
+		}
+
+		keycopy.Set(mkey)
+		valcopy.Set(val)
+		en.value(key, keycopy, TagNone)
+		en.value(key, valcopy, TagNone)
+	}
+
+	// First handle common cases with a direct typeswitch
+	mplen := mpval.Len()
+	// packed := encoder{}
+	switch mpt := mpval.Interface().(type) {
+	default:
+		fmt.Printf("mpval.Interface().(type) = %v\n", mpt)
+		fmt.Printf("mplen := mpval.Len() = %v\n", mplen)
+	}
+
+	//panic(fmt.Sprintf("Hopefully soon supported Type (Map): %d", mpval.Kind()))
 }
 
 var bytesType = reflect.TypeOf([]byte{})
@@ -447,4 +483,45 @@ func (en *encoder) u64(v uint64) {
 	b[6] = byte(v >> 48)
 	b[7] = byte(v >> 56)
 	en.Write(b[:])
+}
+
+// mapEncodeScratch returns a new reflect.Value matching the map's value type,
+// and a structPointer suitable for passing to an encoder or sizer.
+func mapEncodeScratch(mapType reflect.Type) (keycopy, valcopy reflect.Value, keybase, valbase structPointer) {
+	// Prepare addressable doubly-indirect placeholders for the key and value types.
+	// This is needed because the element-type encoders expect **T, but the map iteration produces T.
+
+	keycopy = reflect.New(mapType.Key()).Elem()                 // addressable K
+	keyptr := reflect.New(reflect.PtrTo(keycopy.Type())).Elem() // addressable *K
+	keyptr.Set(keycopy.Addr())                                  //
+	keybase = toStructPointer(keyptr.Addr())                    // **K
+
+	// Value types are more varied and require special handling.
+	switch mapType.Elem().Kind() {
+	case reflect.Slice:
+		// []byte
+		var dummy []byte
+		valcopy = reflect.ValueOf(&dummy).Elem() // addressable []byte
+		valbase = toStructPointer(valcopy.Addr())
+	case reflect.Ptr:
+		// message; the generated field type is map[K]*Msg (so V is *Msg),
+		// so we only need one level of indirection.
+		valcopy = reflect.New(mapType.Elem()).Elem() // addressable V
+		valbase = toStructPointer(valcopy.Addr())
+	default:
+		// everything else
+		valcopy = reflect.New(mapType.Elem()).Elem()                // addressable V
+		valptr := reflect.New(reflect.PtrTo(valcopy.Type())).Elem() // addressable *V
+		valptr.Set(valcopy.Addr())                                  //
+		valbase = toStructPointer(valptr.Addr())                    // **V
+	}
+	return
+}
+
+// A structPointer is a pointer to a struct.
+type structPointer unsafe.Pointer
+
+// toStructPointer returns a structPointer equivalent to the given reflect value.
+func toStructPointer(v reflect.Value) structPointer {
+	return structPointer(unsafe.Pointer(v.Pointer()))
 }
