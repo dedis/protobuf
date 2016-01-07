@@ -49,7 +49,11 @@ func Encode(structPtr interface{}) (bytes []byte, err error) {
 		return nil, nil
 	}
 	en := encoder{}
-	en.message(reflect.ValueOf(structPtr).Elem())
+	val := reflect.ValueOf(structPtr)
+	if val.Kind() != reflect.Ptr {
+		return nil, fmt.Errorf("Encode takes a pointer to struct")
+	}
+	en.message(val.Elem())
 	return en.Bytes(), nil
 }
 
@@ -80,7 +84,6 @@ var timeType = reflect.TypeOf(time.Time{})
 var durationType = reflect.TypeOf(time.Duration(0))
 
 func (en *encoder) value(key uint64, val reflect.Value, prefix TagPrefix) {
-
 	// Non-reflectively handle some of the fixed types
 	switch v := val.Interface().(type) {
 	case bool:

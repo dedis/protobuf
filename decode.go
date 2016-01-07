@@ -4,6 +4,7 @@ import (
 	"encoding"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"math"
 	"reflect"
 	"time"
@@ -22,8 +23,16 @@ import (
 //
 type Constructors map[reflect.Type]func() interface{}
 
+func (c *Constructors) String() string {
+	var s string
+	for k, v := range *c {
+		s += k.String() + "=>" + fmt.Sprintf("%+v", v) + "\t"
+	}
+	return s
+}
+
 type decoder struct {
-	nm map[reflect.Type]func() interface{}
+	nm Constructors
 }
 
 // Decode a protocol buffer into a Go struct.
@@ -44,14 +53,18 @@ func DecodeWithConstructors(buf []byte, structPtr interface{}, cons Constructors
 	if structPtr == nil {
 		return nil
 	}
-	de := decoder{map[reflect.Type]func() interface{}(cons)}
-	return de.message(buf, reflect.ValueOf(structPtr).Elem())
+	de := decoder{cons}
+	val := reflect.ValueOf(structPtr)
+	// if its NOT a pointer, it is bad return an error
+	if val.Kind() != reflect.Ptr {
+		return errors.New("Decode has been given a non pointer type")
+	}
+	return de.message(buf, val.Elem())
 }
 
 // Decode a Protocol Buffers message into a Go struct.
 // The Kind of the passed value v must be Struct.
 func (de *decoder) message(buf []byte, sval reflect.Value) error {
-
 	// Decode all the fields
 	fields := ProtoFields(sval.Type())
 	fieldi := 0
@@ -99,7 +112,6 @@ func (de *decoder) message(buf []byte, sval reflect.Value) error {
 // Pull a value from the buffer and put it into a reflective Value.
 func (de *decoder) value(wiretype int, buf []byte,
 	val reflect.Value) ([]byte, error) {
-
 	// Break out the value from the buffer based on the wire type
 	var v uint64
 	var n int
@@ -154,7 +166,6 @@ func (de *decoder) value(wiretype int, buf []byte,
 	if err := de.putvalue(wiretype, val, v, vb); err != nil {
 		return nil, err
 	}
-
 	return buf, nil
 }
 
