@@ -359,7 +359,7 @@ func (en *encoder) slice(key uint64, slval reflect.Value) {
 func (en *encoder) map_(key uint64, mpval reflect.Value) {
 
 	//keycopy, valcopy, keybase, valbase := mapEncodeScratch(mpval.Type())
-	keycopy, valcopy, _, _ := mapEncodeScratch(mpval.Type())
+	//keycopy, valcopy, keybase, valbase := mapEncodeScratch(mpval.Type())
 
 	for _, mkey := range mpval.MapKeys() {
 		val := mpval.MapIndex(mkey)
@@ -368,23 +368,11 @@ func (en *encoder) map_(key uint64, mpval reflect.Value) {
 		if val.Kind() == reflect.Ptr && val.IsNil() {
 			panic("proto: map has nil element")
 		}
-
-		keycopy.Set(mkey)
-		valcopy.Set(val)
-		en.value(key, keycopy, TagNone)
-		en.value(key, valcopy, TagNone)
+		fmt.Printf("[key %v", mkey)
+		fmt.Printf(", val %v]\n", val)
+		en.value(key, mkey, TagNone)
+		en.value(key, val, TagNone)
 	}
-
-	// First handle common cases with a direct typeswitch
-	mplen := mpval.Len()
-	// packed := encoder{}
-	switch mpt := mpval.Interface().(type) {
-	default:
-		fmt.Printf("mpval.Interface().(type) = %v\n", mpt)
-		fmt.Printf("mplen := mpval.Len() = %v\n", mplen)
-	}
-
-	//panic(fmt.Sprintf("Hopefully soon supported Type (Map): %d", mpval.Kind()))
 }
 
 var bytesType = reflect.TypeOf([]byte{})
