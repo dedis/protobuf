@@ -126,7 +126,7 @@ func (de *decoder) value(wiretype int, buf []byte,
 
 	case 5: // 32-bit
 		if len(buf) < 4 {
-			return nil, errors.New("bad protobuf 64-bit value")
+			return nil, errors.New("bad protobuf 32-bit value")
 		}
 		v = uint64(buf[0]) |
 			uint64(buf[1])<<8 |
