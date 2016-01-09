@@ -2,8 +2,12 @@ package protobuf
 
 import (
 	"bytes"
+	"encoding/hex"
+	"fmt"
 	"reflect"
 	"testing"
+	// for more human friendly hex dump output (firs...last 3 bytes):
+	goprotobuf "github.com/golang/protobuf/proto"
 )
 
 type Inner struct {
@@ -12,14 +16,15 @@ type Inner struct {
 }
 
 type MessageWithMap struct {
-	NameMapping map[int32]string // = 1, required
-	//ByteMapping   map[bool][]byte
-	//StructMapping map[string]Inner
+	NameMapping map[uint32]string // = 1, required
+	ByteMapping map[bool][]byte
+	//MsgMapping    map[int64]*FloatingPoint
+	StructMapping map[string]Inner
 }
 
 func TestMapFieldEncode(t *testing.T) {
 	m := &MessageWithMap{
-		NameMapping: map[int32]string{
+		NameMapping: map[uint32]string{
 			1: "Rob",
 			4: "Ian",
 			8: "Dave",
@@ -30,13 +35,14 @@ func TestMapFieldEncode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Encode: %v", err)
 	}
-
+	//fmt.Print(hex.Dump(b))
 	// b should be the concatenation of these three byte sequences in some order.
 	parts := []string{
 		"\n\a\b\x01\x12\x03Rob",
 		"\n\a\b\x04\x12\x03Ian",
 		"\n\b\b\x08\x12\x04Dave",
 	}
+	// "\n\t\b\x01\x12\x05Linus\n\v\b\x04\x12\aNicolas\n\n\b\b\x12\x06Ismail"
 	ok := false
 	for i := range parts {
 		for j := range parts {
@@ -56,16 +62,16 @@ func TestMapFieldEncode(t *testing.T) {
 		}
 	}
 	if !ok {
+		(new(goprotobuf.Buffer)).DebugPrint("Dump of b", b)
 		t.Fatalf("Incorrect Encoding output.\n got %q\nwant %q (or a permutation of that)", b, parts[0]+parts[1]+parts[2])
 	}
 	t.Logf("FYI b: %q", b)
 
-	//(new(Buffer)).DebugPrint("Dump of b", b)
 }
 
 func TestMapFieldRoundTrips(t *testing.T) {
 	m := &MessageWithMap{
-		NameMapping: map[int32]string{
+		NameMapping: map[uint32]string{
 			1: "Rob",
 			4: "Ian",
 			8: "Dave",
@@ -73,12 +79,13 @@ func TestMapFieldRoundTrips(t *testing.T) {
 		// MsgMapping: map[int64]*FloatingPoint{
 		// 	0x7001: &FloatingPoint{F: Float64(2.0)},
 		// },
-		// ByteMapping: map[bool][]byte{
-		// 	false: []byte("that's not right!"),
-		// 	true:  []byte("aye, 'tis true!"),
-		// },
+		ByteMapping: map[bool][]byte{
+			false: []byte("that's not right!"),
+			true:  []byte("aye, 'tis true!"),
+		},
 	}
 	b, err := Encode(m)
+	fmt.Print(hex.Dump(b))
 	if err != nil {
 		t.Fatalf("Encode: %v", err)
 	}
