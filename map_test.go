@@ -2,8 +2,6 @@ package protobuf
 
 import (
 	"bytes"
-	"encoding/hex"
-	"fmt"
 	"reflect"
 	"testing"
 	// for more human friendly hex dump output (firs...last 3 bytes):
@@ -15,10 +13,14 @@ type Inner struct {
 	Name string
 }
 
+type FloatingPoint struct {
+	F *float64 `protobuf:"fixed64,1,req,name=f" json:"f,omitempty"`
+}
+
 type MessageWithMap struct {
-	NameMapping map[uint32]string // = 1, required
-	ByteMapping map[bool][]byte
-	//MsgMapping    map[int64]*FloatingPoint
+	NameMapping   map[uint32]string // = 1, required
+	ByteMapping   map[bool][]byte
+	MsgMapping    map[int64]*FloatingPoint
 	StructMapping map[string]Inner
 }
 
@@ -70,22 +72,23 @@ func TestMapFieldEncode(t *testing.T) {
 }
 
 func TestMapFieldRoundTrips(t *testing.T) {
+	Float := float64(2.0)
 	m := &MessageWithMap{
 		NameMapping: map[uint32]string{
 			1: "Rob",
 			4: "Ian",
 			8: "Dave",
 		},
-		// MsgMapping: map[int64]*FloatingPoint{
-		// 	0x7001: &FloatingPoint{F: Float64(2.0)},
-		// },
+		MsgMapping: map[int64]*FloatingPoint{
+			0x7001: &FloatingPoint{F: &Float},
+		},
 		ByteMapping: map[bool][]byte{
 			false: []byte("that's not right!"),
 			true:  []byte("aye, 'tis true!"),
 		},
 	}
 	b, err := Encode(m)
-	fmt.Print(hex.Dump(b))
+	// fmt.Print(hex.Dump(b))
 	if err != nil {
 		t.Fatalf("Encode: %v", err)
 	}
@@ -95,7 +98,7 @@ func TestMapFieldRoundTrips(t *testing.T) {
 	if err := Decode(b, m2); err != nil {
 		t.Fatalf("Decode: %v", err)
 	}
-	fmt.Printf("m2=%v\n", m2)
+	// fmt.Printf("m2=%v\n", m2)
 	for _, pair := range [][2]interface{}{
 		{m.NameMapping, m2.NameMapping},
 	} {
@@ -106,13 +109,13 @@ func TestMapFieldRoundTrips(t *testing.T) {
 }
 
 func TestMapFieldWithNil(t *testing.T) {
-	// m := &MessageWithMap{
-	// 	MsgMapping: map[int64]*FloatingPoint{
-	// 		1: nil,
-	// 	},
-	// }
-	// b, err := Marshal(m)
-	// if err == nil {
-	// 	t.Fatalf("Marshal of bad map should have failed, got these bytes: %v", b)
-	// }
+	m := &MessageWithMap{
+		MsgMapping: map[int64]*FloatingPoint{
+			1: nil,
+		},
+	}
+	b, err := Encode(m)
+	if err == nil {
+		t.Fatalf("Marshal of bad map should have failed, got these bytes: %v", b)
+	}
 }
