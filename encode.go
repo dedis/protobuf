@@ -84,6 +84,7 @@ var timeType = reflect.TypeOf(time.Time{})
 var durationType = reflect.TypeOf(time.Duration(0))
 
 func (en *encoder) value(key uint64, val reflect.Value, prefix TagPrefix) {
+
 	// Non-reflectively handle some of the fixed types
 	switch v := val.Interface().(type) {
 	case bool:
@@ -176,7 +177,6 @@ func (en *encoder) value(key uint64, val reflect.Value, prefix TagPrefix) {
 		return
 
 	}
-	//fmt.Printf("type %s\n", val.Type().Name())
 
 	// Handle pointer or interface values (possibly within slices).
 	// Note that this switch has to handle all the cases,
@@ -396,7 +396,6 @@ func (en *encoder) sliceReflect(key uint64, slval reflect.Value) {
 	sllen := slval.Len()
 	slelt := slval.Type().Elem()
 	packed := encoder{}
-
 	switch slelt.Kind() {
 	case reflect.Bool:
 		for i := 0; i < sllen; i++ {

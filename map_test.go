@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 	// for more human friendly hex dump output (firs...last 3 bytes):
-	goprotobuf "github.com/golang/protobuf/proto"
+	// goprotobuf "github.com/golang/protobuf/proto"
 )
 
 type Inner struct {
@@ -44,7 +44,7 @@ func TestMapFieldEncode(t *testing.T) {
 		"\n\a\b\x04\x12\x03Ian",
 		"\n\b\b\x08\x12\x04Dave",
 	}
-	// "\n\t\b\x01\x12\x05Linus\n\v\b\x04\x12\aNicolas\n\n\b\b\x12\x06Ismail"
+
 	ok := false
 	for i := range parts {
 		for j := range parts {
@@ -64,7 +64,6 @@ func TestMapFieldEncode(t *testing.T) {
 		}
 	}
 	if !ok {
-		(new(goprotobuf.Buffer)).DebugPrint("Dump of b", b)
 		t.Fatalf("Incorrect Encoding output.\n got %q\nwant %q (or a permutation of that)", b, parts[0]+parts[1]+parts[2])
 	}
 	t.Logf("FYI b: %q", b)
@@ -93,8 +92,8 @@ func TestMapFieldRoundTrips(t *testing.T) {
 		t.Fatalf("Encode: %v", err)
 	}
 	t.Logf("FYI b: %q", b)
+
 	m2 := new(MessageWithMap)
-	// First fix the encoding:
 	if err := Decode(b, m2); err != nil {
 		t.Fatalf("Decode: %v", err)
 	}
