@@ -95,6 +95,7 @@ func TestMapFieldRoundTrips(t *testing.T) {
 	if err := Decode(b, m2); err != nil {
 		t.Fatalf("Decode: %v", err)
 	}
+	fmt.Printf("m2=%v\n", m2)
 	for _, pair := range [][2]interface{}{
 		{m.NameMapping, m2.NameMapping},
 	} {

@@ -112,6 +112,7 @@ func (de *decoder) message(buf []byte, sval reflect.Value) error {
 // Pull a value from the buffer and put it into a reflective Value.
 func (de *decoder) value(wiretype int, buf []byte,
 	val reflect.Value) ([]byte, error) {
+
 	// Break out the value from the buffer based on the wire type
 	var v uint64
 	var n int
@@ -277,7 +278,15 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 			return errors.New("bad wiretype for repeated field")
 		}
 		return de.slice(val, vb)
-
+	case reflect.Map:
+		if wiretype != 2 {
+			return errors.New("bad wiretype for repeated field")
+		}
+		if val.IsNil() {
+			// make(map[k]v):
+			val.Set(reflect.MakeMap(val.Type()))
+		}
+		return de.handleMap(val, vb)
 	case reflect.Interface:
 		// Abstract field: instantiate via dynamic constructor.
 		if val.IsNil() {
@@ -379,5 +388,44 @@ func (de *decoder) slice(slval reflect.Value, vb []byte) error {
 		slval.Set(reflect.Append(slval, val))
 		vb = rem
 	}
+	return nil
+}
+
+func (de *decoder) handleMap(slval reflect.Value, vb []byte) error {
+	mKey := reflect.New(slval.Type().Key())
+	mVal := reflect.New(slval.Type().Elem())
+	k := mKey.Elem()
+	v := mVal.Elem()
+	key, n := binary.Uvarint(vb)
+	if n <= 0 {
+		return errors.New("bad protobuf field key")
+	}
+	buf := vb[n:]
+	wiretype := int(key & 7)
+
+	var err error
+	buf, err = de.value(wiretype, buf, k)
+	if err != nil {
+		return err
+	}
+
+	key, n = binary.Uvarint(buf)
+	if n <= 0 {
+		return errors.New("bad protobuf field key")
+	}
+	buf = buf[n:]
+	wiretype = int(key & 7)
+	buf, err = de.value(wiretype, buf, v)
+	if err != nil {
+		return err
+	}
+
+	if !k.IsValid() || !v.IsValid() {
+		// 	// We did not decode the key or the value in the map entry.
+		// 	// Either way, it's an invalid map entry.
+		return fmt.Errorf("proto: bad map data: missing key/val")
+	}
+	slval.SetMapIndex(k, v)
+
 	return nil
 }

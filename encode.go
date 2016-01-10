@@ -264,7 +264,7 @@ func (en *encoder) value(key uint64, val reflect.Value, prefix TagPrefix) {
 		en.value(key, val.Elem(), prefix)
 
 	case reflect.Map:
-		en.map_(key, val, prefix)
+		en.handleMap(key, val, prefix)
 		return
 
 	default:
@@ -355,7 +355,17 @@ func (en *encoder) slice(key uint64, slval reflect.Value) {
 	en.Write(b)
 }
 
-func (en *encoder) map_(key uint64, mpval reflect.Value, prefix TagPrefix) {
+func (en *encoder) handleMap(key uint64, mpval reflect.Value, prefix TagPrefix) {
+	/*
+		A map defined as
+			map<key_type, value_type> map_field = N;
+		is encoded in the same way as
+			message MapFieldEntry {
+				key_type key = 1;
+				value_type value = 2;
+			}
+			repeated MapFieldEntry map_field = N;
+	*/
 
 	for _, mkey := range mpval.MapKeys() {
 		mval := mpval.MapIndex(mkey)
@@ -370,9 +380,9 @@ func (en *encoder) map_(key uint64, mpval reflect.Value, prefix TagPrefix) {
 		packed.value(uint64(fieldId+1)<<3, mval, prefix)
 
 		en.uvarint(key | 2)
-		b2 := packed.Bytes()
-		en.uvarint((uint64(len(b2))))
-		en.Write(b2)
+		b := packed.Bytes()
+		en.uvarint((uint64(len(b))))
+		en.Write(b)
 	}
 }
 
