@@ -354,8 +354,8 @@ func (en *encoder) slice(key uint64, slval reflect.Value) {
 var bytesType = reflect.TypeOf([]byte{})
 
 func (en *encoder) sliceReflect(key uint64, slval reflect.Value) {
-
-	if slval.Kind() != reflect.Slice && slval.Kind() != reflect.Array {
+	kind := slval.Kind()
+	if kind != reflect.Slice && kind != reflect.Array {
 		panic("no slice passed")
 	}
 	sllen := slval.Len()
