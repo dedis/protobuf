@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"reflect"
 	"testing"
-	// for more human friendly hex dump output (firs...last 3 bytes):
+	// for more human friendly hex dump output (first ... last 3 bytes):
 	// goprotobuf "github.com/golang/protobuf/proto"
 )
 
@@ -21,7 +21,8 @@ type MessageWithMap struct {
 	NameMapping   map[uint32]string // = 1, required
 	ByteMapping   map[bool][]byte
 	MsgMapping    map[int64]*FloatingPoint
-	StructMapping map[string]Inner
+	StrToStr      map[string]string
+	StructMapping map[string]*Inner
 }
 
 func TestMapFieldEncode(t *testing.T) {
@@ -37,7 +38,7 @@ func TestMapFieldEncode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Encode: %v", err)
 	}
-	//fmt.Print(hex.Dump(b))
+
 	// b should be the concatenation of these three byte sequences in some order.
 	parts := []string{
 		"\n\a\b\x01\x12\x03Rob",
@@ -85,9 +86,16 @@ func TestMapFieldRoundTrips(t *testing.T) {
 			false: []byte("that's not right!"),
 			true:  []byte("aye, 'tis true!"),
 		},
+		StrToStr: map[string]string{
+			"a key":     "value",
+			"other key": "other value",
+		},
+		StructMapping: map[string]*Inner{
+			"first":  &Inner{Id: 1, Name: "one"},
+			"second": &Inner{Id: 5, Name: "two"},
+		},
 	}
 	b, err := Encode(m)
-	// fmt.Print(hex.Dump(b))
 	if err != nil {
 		t.Fatalf("Encode: %v", err)
 	}
@@ -97,7 +105,6 @@ func TestMapFieldRoundTrips(t *testing.T) {
 	if err := Decode(b, m2); err != nil {
 		t.Fatalf("Decode: %v", err)
 	}
-	// fmt.Printf("m2=%v\n", m2)
 	for _, pair := range [][2]interface{}{
 		{m.NameMapping, m2.NameMapping},
 	} {
