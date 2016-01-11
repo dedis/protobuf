@@ -102,7 +102,7 @@ func (de *decoder) message(buf []byte, sval reflect.Value) error {
 		// Decode the field's value
 		rem, err := de.value(wiretype, buf, field)
 		if err != nil {
-			return err
+			return fmt.Errorf("FIeldName %s: %v", fields[fieldi].Name, err)
 		}
 		buf = rem
 	}
@@ -158,7 +158,7 @@ func (de *decoder) value(wiretype int, buf []byte,
 		buf = buf[n+int(v):]
 
 	default:
-		return nil, errors.New("unknown protobuf wire-type")
+		return nil, fmt.Errorf("unknown protobuf wire-type")
 	}
 
 	// We've gotten the value out of the buffer,
@@ -210,6 +210,7 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 	case reflect.Int, reflect.Int32, reflect.Int64:
 		sv, err := de.decodeSignedInt(wiretype, v)
 		if err != nil {
+			fmt.Println("Error Reflect.Int for v=", v, "wiretype=", wiretype, "for Value=", val.Type().Name())
 			return err
 		}
 		val.SetInt(sv)
@@ -272,7 +273,7 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 		return de.putvalue(wiretype, val.Elem(), v, vb)
 
 	// Repeated field or byte-slice
-	case reflect.Slice:
+	case reflect.Slice, reflect.Array:
 		if wiretype != 2 {
 			return errors.New("bad wiretype for repeated field")
 		}
@@ -358,7 +359,17 @@ func (de *decoder) slice(slval reflect.Value, vb []byte) error {
 		wiretype = 1 // Packed 64-bit representation
 
 	case reflect.Uint8: // Unpacked byte-slice
-		slval.SetBytes(vb)
+		if slval.Kind() == reflect.Array {
+			if slval.Len() != len(vb) {
+				panic("Array length != bufer length")
+			}
+			for i := 0; i < slval.Len(); i++ {
+				// no SetByte method in reflect so has to pass down by uint64
+				slval.Index(i).SetUint(uint64(vb[i]))
+			}
+		} else {
+			slval.SetBytes(vb)
+		}
 		return nil
 
 	default: // Other unpacked repeated types

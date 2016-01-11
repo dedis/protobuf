@@ -64,7 +64,7 @@ func fieldPrefix(f ProtoField, def TagPrefix) string {
 }
 
 func innerTypeName(t reflect.Type, enums enumTypeMap, renamer GeneratorNamer) string {
-	if t.Kind() == reflect.Slice && t.Elem().Kind() == reflect.Uint8 {
+	if (t.Kind() == reflect.Slice || t.Kind() == reflect.Array) && t.Elem().Kind() == reflect.Uint8 {
 		return "bytes"
 	}
 	if t.PkgPath() == "time" {

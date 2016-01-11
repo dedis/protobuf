@@ -42,6 +42,7 @@ type test struct {
 	F32    float32
 	F64    float64
 	Bytes  []byte
+	Array  [2]byte
 	String string
 	Struct emb
 
@@ -145,7 +146,7 @@ func TestProtobuf(t *testing.T) {
 	e9 := test{Bytes: []byte{}}
 
 	t1 := test{true, 0, -1, -2, 3, 4, -11, -22, 33, 44, 5.0, 6.0,
-		[]byte("789"), "abc", emb{123, "def"},
+		[]byte("789"), [2]byte{1, 2}, "abc", emb{123, "def"},
 		&b0, &i1, &i2, &i3, &i4, &f5, &f6, &b7, &s8, &e9,
 		[]mybool{true, false, true},
 		[]myint32{1, -2, 3}, []myint64{2, -3, 4},
