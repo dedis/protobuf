@@ -80,6 +80,28 @@ message PhoneNumber {
 	assert.Equal(t, expected, w.String())
 }
 
+func TestGenerateMapExample(t *testing.T) {
+	w := &bytes.Buffer{}
+	err := GenerateProtobufDefinition(w, []interface{}{MessageWithMap{}, FloatingPoint{}}, nil, nil)
+	assert.NoError(t, err)
+
+	expected := `
+message FloatingPoint {
+  optional double f = 1;
+}
+
+message MessageWithMap {
+  required map<uint32, string> name_mapping = 1;
+  required map<bool, bytes> byte_mapping = 2;
+  required map<sint64, FloatingPoint> msg_mapping = 3;
+  required map<string, string> str_to_str = 4;
+  required map<string, Inner> struct_mapping = 5;
+}
+
+`
+	assert.Equal(t, expected, w.String())
+}
+
 type TimeStruct struct {
 	Created time.Time
 	Delay   time.Duration

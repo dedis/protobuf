@@ -109,6 +109,22 @@ func innerTypeName(t reflect.Type, enums enumTypeMap, renamer GeneratorNamer) st
 		return "string"
 	case reflect.Struct:
 		return t.Name()
+	case reflect.Map:
+		// we have to do this again (otherwise we'll end up with an empty name for the value):
+		var valTypeName string
+		valType := t.Elem()
+		if valType.Kind() == reflect.Slice {
+			if valType.Elem().Kind() == reflect.Uint8 {
+				valTypeName = "bytes"
+			} else {
+				valTypeName = innerTypeName(typeIndirect(valType.Elem()), enums, renamer)
+			}
+		} else if valType.Kind() == reflect.Ptr {
+			valTypeName = innerTypeName(valType.Elem(), enums, renamer)
+		} else { // here we can just use the value's type:
+			valTypeName = innerTypeName(valType, enums, renamer)
+		}
+		return fmt.Sprintf("map<%s, %s>", innerTypeName(t.Key(), enums, renamer), valTypeName)
 	default:
 		panic("unsupported type " + t.Name())
 	}
@@ -226,5 +242,6 @@ func GenerateProtobufDefinition(w io.Writer, types []interface{}, enumMap EnumMa
 		"Types":   rt,
 		"Ptr":     reflect.Ptr,
 		"Slice":   reflect.Slice,
+		"Map":     reflect.Map,
 	})
 }

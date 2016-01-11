@@ -14,7 +14,7 @@ type Inner struct {
 }
 
 type FloatingPoint struct {
-	F *float64 `protobuf:"fixed64,1,req,name=f" json:"f,omitempty"`
+	F *float64 `protobuf:"1,req"`
 }
 
 type MessageWithMap struct {
