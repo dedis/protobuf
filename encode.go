@@ -355,6 +355,7 @@ func (en *encoder) slice(key uint64, slval reflect.Value) {
 	en.Write(b)
 }
 
+// Handle the encoding of an arbritary map[K]V
 func (en *encoder) handleMap(key uint64, mpval reflect.Value, prefix TagPrefix) {
 	/*
 		A map defined as

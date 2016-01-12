@@ -286,7 +286,7 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 			// make(map[k]v):
 			val.Set(reflect.MakeMap(val.Type()))
 		}
-		return de.handleMap(val, vb)
+		return de.mapEntry(val, vb)
 	case reflect.Interface:
 		// Abstract field: instantiate via dynamic constructor.
 		if val.IsNil() {
@@ -391,7 +391,8 @@ func (de *decoder) slice(slval reflect.Value, vb []byte) error {
 	return nil
 }
 
-func (de *decoder) handleMap(slval reflect.Value, vb []byte) error {
+// Handles the entry k,v of a map[K]V
+func (de *decoder) mapEntry(slval reflect.Value, vb []byte) error {
 	mKey := reflect.New(slval.Type().Key())
 	mVal := reflect.New(slval.Type().Elem())
 	k := mKey.Elem()
@@ -421,8 +422,8 @@ func (de *decoder) handleMap(slval reflect.Value, vb []byte) error {
 	}
 
 	if !k.IsValid() || !v.IsValid() {
-		// 	// We did not decode the key or the value in the map entry.
-		// 	// Either way, it's an invalid map entry.
+		// We did not decode the key or the value in the map entry.
+		// Either way, it's an invalid map entry.
 		return fmt.Errorf("proto: bad map data: missing key/val")
 	}
 	slval.SetMapIndex(k, v)

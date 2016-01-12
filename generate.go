@@ -121,7 +121,8 @@ func innerTypeName(t reflect.Type, enums enumTypeMap, renamer GeneratorNamer) st
 			}
 		} else if valType.Kind() == reflect.Ptr {
 			valTypeName = innerTypeName(valType.Elem(), enums, renamer)
-		} else { // here we can just use the value's type:
+		} else {
+			// here we can just use the value's type:
 			valTypeName = innerTypeName(valType, enums, renamer)
 		}
 		return fmt.Sprintf("map<%s, %s>", innerTypeName(t.Key(), enums, renamer), valTypeName)
