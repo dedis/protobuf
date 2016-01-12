@@ -23,6 +23,7 @@ import (
 //
 type Constructors map[reflect.Type]func() interface{}
 
+// String returns an easy way to visualize what you have in your constructors.
 func (c *Constructors) String() string {
 	var s string
 	for k, v := range *c {
@@ -31,6 +32,7 @@ func (c *Constructors) String() string {
 	return s
 }
 
+// Decoder is the main struct used to decode a protobuf blob.
 type decoder struct {
 	nm Constructors
 }
