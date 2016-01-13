@@ -4,6 +4,7 @@ import (
 	"encoding"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"math"
 	"reflect"
 	"time"
@@ -22,8 +23,16 @@ import (
 //
 type Constructors map[reflect.Type]func() interface{}
 
+func (c *Constructors) String() string {
+	var s string
+	for k, v := range *c {
+		s += k.String() + "=>" + fmt.Sprintf("%+v", v) + "\t"
+	}
+	return s
+}
+
 type decoder struct {
-	nm map[reflect.Type]func() interface{}
+	nm Constructors
 }
 
 // Decode a protocol buffer into a Go struct.
@@ -44,14 +53,18 @@ func DecodeWithConstructors(buf []byte, structPtr interface{}, cons Constructors
 	if structPtr == nil {
 		return nil
 	}
-	de := decoder{map[reflect.Type]func() interface{}(cons)}
-	return de.message(buf, reflect.ValueOf(structPtr).Elem())
+	de := decoder{cons}
+	val := reflect.ValueOf(structPtr)
+	// if its NOT a pointer, it is bad return an error
+	if val.Kind() != reflect.Ptr {
+		return errors.New("Decode has been given a non pointer type")
+	}
+	return de.message(buf, val.Elem())
 }
 
 // Decode a Protocol Buffers message into a Go struct.
 // The Kind of the passed value v must be Struct.
 func (de *decoder) message(buf []byte, sval reflect.Value) error {
-
 	// Decode all the fields
 	fields := ProtoFields(sval.Type())
 	fieldi := 0
@@ -114,7 +127,7 @@ func (de *decoder) value(wiretype int, buf []byte,
 
 	case 5: // 32-bit
 		if len(buf) < 4 {
-			return nil, errors.New("bad protobuf 64-bit value")
+			return nil, errors.New("bad protobuf 32-bit value")
 		}
 		v = uint64(buf[0]) |
 			uint64(buf[1])<<8 |
@@ -154,7 +167,6 @@ func (de *decoder) value(wiretype int, buf []byte,
 	if err := de.putvalue(wiretype, val, v, vb); err != nil {
 		return nil, err
 	}
-
 	return buf, nil
 }
 
@@ -266,7 +278,15 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 			return errors.New("bad wiretype for repeated field")
 		}
 		return de.slice(val, vb)
-
+	case reflect.Map:
+		if wiretype != 2 {
+			return errors.New("bad wiretype for repeated field")
+		}
+		if val.IsNil() {
+			// make(map[k]v):
+			val.Set(reflect.MakeMap(val.Type()))
+		}
+		return de.mapEntry(val, vb)
 	case reflect.Interface:
 		// Abstract field: instantiate via dynamic constructor.
 		if val.IsNil() {
@@ -368,5 +388,45 @@ func (de *decoder) slice(slval reflect.Value, vb []byte) error {
 		slval.Set(reflect.Append(slval, val))
 		vb = rem
 	}
+	return nil
+}
+
+// Handles the entry k,v of a map[K]V
+func (de *decoder) mapEntry(slval reflect.Value, vb []byte) error {
+	mKey := reflect.New(slval.Type().Key())
+	mVal := reflect.New(slval.Type().Elem())
+	k := mKey.Elem()
+	v := mVal.Elem()
+	key, n := binary.Uvarint(vb)
+	if n <= 0 {
+		return errors.New("bad protobuf field key")
+	}
+	buf := vb[n:]
+	wiretype := int(key & 7)
+
+	var err error
+	buf, err = de.value(wiretype, buf, k)
+	if err != nil {
+		return err
+	}
+
+	key, n = binary.Uvarint(buf)
+	if n <= 0 {
+		return errors.New("bad protobuf field key")
+	}
+	buf = buf[n:]
+	wiretype = int(key & 7)
+	buf, err = de.value(wiretype, buf, v)
+	if err != nil {
+		return err
+	}
+
+	if !k.IsValid() || !v.IsValid() {
+		// We did not decode the key or the value in the map entry.
+		// Either way, it's an invalid map entry.
+		return fmt.Errorf("proto: bad map data: missing key/val")
+	}
+	slval.SetMapIndex(k, v)
+
 	return nil
 }

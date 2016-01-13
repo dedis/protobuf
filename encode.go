@@ -49,7 +49,11 @@ func Encode(structPtr interface{}) (bytes []byte, err error) {
 		return nil, nil
 	}
 	en := encoder{}
-	en.message(reflect.ValueOf(structPtr).Elem())
+	val := reflect.ValueOf(structPtr)
+	if val.Kind() != reflect.Ptr {
+		return nil, fmt.Errorf("Encode takes a pointer to struct")
+	}
+	en.message(val.Elem())
 	return en.Bytes(), nil
 }
 
@@ -173,7 +177,6 @@ func (en *encoder) value(key uint64, val reflect.Value, prefix TagPrefix) {
 		return
 
 	}
-	//fmt.Printf("type %s\n",val.Type().Name())
 
 	// Handle pointer or interface values (possibly within slices).
 	// Note that this switch has to handle all the cases,
@@ -259,6 +262,10 @@ func (en *encoder) value(key uint64, val reflect.Value, prefix TagPrefix) {
 
 		// Encode from the object the interface points to.
 		en.value(key, val.Elem(), prefix)
+
+	case reflect.Map:
+		en.handleMap(key, val, prefix)
+		return
 
 	default:
 		panic(fmt.Sprintf("unsupported field Kind %d", val.Kind()))
@@ -346,6 +353,38 @@ func (en *encoder) slice(key uint64, slval reflect.Value) {
 	b := packed.Bytes()
 	en.uvarint(uint64(len(b)))
 	en.Write(b)
+}
+
+// Handle the encoding of an arbritary map[K]V
+func (en *encoder) handleMap(key uint64, mpval reflect.Value, prefix TagPrefix) {
+	/*
+		A map defined as
+			map<key_type, value_type> map_field = N;
+		is encoded in the same way as
+			message MapFieldEntry {
+				key_type key = 1;
+				value_type value = 2;
+			}
+			repeated MapFieldEntry map_field = N;
+	*/
+
+	for _, mkey := range mpval.MapKeys() {
+		mval := mpval.MapIndex(mkey)
+
+		// The only illegal map entry values are nil message pointers.
+		if mval.Kind() == reflect.Ptr && mval.IsNil() {
+			panic("proto: map has nil element")
+		}
+		packed := encoder{}
+		packed.value(key, mkey, prefix)
+		fieldId := uint64(key >> 3)
+		packed.value(uint64(fieldId+1)<<3, mval, prefix)
+
+		en.uvarint(key | 2)
+		b := packed.Bytes()
+		en.uvarint((uint64(len(b))))
+		en.Write(b)
+	}
 }
 
 var bytesType = reflect.TypeOf([]byte{})

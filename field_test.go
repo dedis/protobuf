@@ -39,10 +39,10 @@ func TestEncodeNested(t *testing.T) {
 		{11, TagNone, "renamed", []int{1, 2}, reflect.StructField{}},
 	}
 	assert.Equal(t, expected, actual)
-	assert.Equal(t, v.FieldByIndex(actual[0].Index).Int(), 13)
-	assert.Equal(t, v.FieldByIndex(actual[1].Index).Int(), 12)
-	assert.Equal(t, v.FieldByIndex(actual[2].Index).Int(), 14)
-	assert.Equal(t, v.FieldByIndex(actual[3].Index).Int(), 15)
+	assert.Equal(t, v.FieldByIndex(actual[0].Index).Int(), int64(13))
+	assert.Equal(t, v.FieldByIndex(actual[1].Index).Int(), int64(12))
+	assert.Equal(t, v.FieldByIndex(actual[2].Index).Int(), int64(14))
+	assert.Equal(t, v.FieldByIndex(actual[3].Index).Int(), int64(15))
 }
 
 type TestDuplicateID struct {
