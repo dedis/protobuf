@@ -104,7 +104,7 @@ func (de *decoder) message(buf []byte, sval reflect.Value) error {
 		// Decode the field's value
 		rem, err := de.value(wiretype, buf, field)
 		if err != nil {
-			return fmt.Errorf("FIeldName %s: %v", fields[fieldi].Name, err)
+			return fmt.Errorf("FieldName %s: %v", fields[fieldi].Name, err)
 		}
 		buf = rem
 	}
@@ -160,7 +160,7 @@ func (de *decoder) value(wiretype int, buf []byte,
 		buf = buf[n+int(v):]
 
 	default:
-		return nil, fmt.Errorf("unknown protobuf wire-type")
+		return nil, errors.New("unknown protobuf wire-type")
 	}
 
 	// We've gotten the value out of the buffer,
@@ -363,7 +363,7 @@ func (de *decoder) slice(slval reflect.Value, vb []byte) error {
 	case reflect.Uint8: // Unpacked byte-slice
 		if slval.Kind() == reflect.Array {
 			if slval.Len() != len(vb) {
-				panic("Array length != bufer length")
+				panic("Array length != buffer length")
 			}
 			for i := 0; i < slval.Len(); i++ {
 				// no SetByte method in reflect so has to pass down by uint64

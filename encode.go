@@ -51,7 +51,7 @@ func Encode(structPtr interface{}) (bytes []byte, err error) {
 	en := encoder{}
 	val := reflect.ValueOf(structPtr)
 	if val.Kind() != reflect.Ptr {
-		return nil, fmt.Errorf("Encode takes a pointer to struct")
+		return nil, errors.New("Encode takes a pointer to struct")
 	}
 	en.message(val.Elem())
 	return en.Bytes(), nil
