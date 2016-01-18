@@ -27,8 +27,9 @@ message test {
   required float f32 = 11;
   required double f64 = 12;
   required bytes bytes = 13;
-  required string string = 14;
-  required emb struct = 15;
+  required bytes array = 14;
+  required string string = 15;
+  required emb struct = 16;
   optional bool obool = 50;
   optional sint32 oi32 = 51;
   optional sint64 oi64 = 52;
