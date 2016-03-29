@@ -104,7 +104,11 @@ func (de *decoder) message(buf []byte, sval reflect.Value) error {
 		// Decode the field's value
 		rem, err := de.value(wiretype, buf, field)
 		if err != nil {
-			return fmt.Errorf("FieldName %s: %v", fields[fieldi].Name, err)
+			if fieldi < len(fields) {
+				return fmt.Errorf("FieldName %s: %v", fields[fieldi].Name, err)
+			} else {
+				return errors.New("Error while decoding: " + err.Error())
+			}
 		}
 		buf = rem
 	}
