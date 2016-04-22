@@ -68,7 +68,8 @@ type Wrapper3 struct {
 
 // MarshalBinary adds one to the data to check if we passed here
 func (w *Wrapper3) MarshalBinary() ([]byte, error) {
-	return []byte{byte(w.A + 1), byte(w.B + 1)}, nil
+	b := []byte{byte(w.A + 1), byte(w.B + 1)}
+	return b, nil
 }
 
 // UnmarshalBinary swaps the data to check if we passed here
@@ -88,12 +89,12 @@ func TestBinaryMarshalerStruct(t *testing.T) {
 	buf, err := Encode(wrapper3)
 	assert.Nil(t, err)
 
-	wrapper4 := &Wrapper3{}
-	err = Decode(buf, wrapper4)
+	wrapper3_ := &Wrapper3{}
+	err = Decode(buf, wrapper3_)
 
 	assert.Nil(t, err)
-	assert.Equal(t, 5, wrapper4.A)
-	assert.Equal(t, 2, wrapper4.B)
+	assert.Equal(t, 5, wrapper3_.A)
+	assert.Equal(t, 2, wrapper3_.B)
 
 	// Working: a structure holding a structure that supports
 	// self-encoding

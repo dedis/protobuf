@@ -53,7 +53,16 @@ func Encode(structPtr interface{}) (bytes []byte, err error) {
 	if val.Kind() != reflect.Ptr {
 		return nil, errors.New("Encode takes a pointer to struct")
 	}
-	en.message(val.Elem())
+	bm := reflect.TypeOf((*encoding.BinaryMarshaler)(nil)).Elem()
+	if ok := val.Type().Implements(bm); ok {
+		bytes, err := val.Interface().(encoding.BinaryMarshaler).MarshalBinary()
+		if err != nil {
+			panic(err.Error())
+		}
+		en.Write(bytes)
+	} else {
+		en.message(val.Elem())
+	}
 	return en.Bytes(), nil
 }
 
