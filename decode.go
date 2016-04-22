@@ -253,6 +253,16 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 
 	// Embedded message
 	case reflect.Struct:
+		bm := reflect.TypeOf((*encoding.BinaryUnmarshaler)(nil)).Elem()
+		if ok := val.Addr().Type().Implements(bm); ok {
+			// If the object support self-decoding, use that.
+			if wiretype != 2 {
+				return errors.New(
+					"bad wiretype for bytes")
+			}
+			enc := val.Addr().Interface().(encoding.BinaryUnmarshaler)
+			return enc.UnmarshalBinary(vb)
+		}
 		if val.Type() == timeType {
 			sv, err := de.decodeSignedInt(wiretype, v)
 			if err != nil {
