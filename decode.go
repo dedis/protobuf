@@ -8,8 +8,6 @@ import (
 	"math"
 	"reflect"
 	"time"
-
-	"github.com/dedis/cothority/lib/dbg"
 )
 
 // Constructors represents a map defining how to instantiate any interface
@@ -70,7 +68,6 @@ func DecodeWithConstructors(buf []byte, structPtr interface{}, cons Constructors
 // The Kind of the passed value v must be Struct.
 func (de *decoder) message(buf []byte, sval reflect.Value) error {
 	// Decode all the fields
-	dbg.Lvl5("Decoding", sval.Type())
 	fields := ProtoFields(sval.Type())
 	fieldi := 0
 	for len(buf) > 0 {

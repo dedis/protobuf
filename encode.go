@@ -9,8 +9,6 @@ import (
 	"math"
 	"reflect"
 	"time"
-
-	"github.com/dedis/cothority/lib/dbg"
 )
 
 // Message fields declared to have exactly this type
@@ -61,7 +59,6 @@ func Encode(structPtr interface{}) (bytes []byte, err error) {
 
 func (en *encoder) message(sval reflect.Value) {
 	var index *ProtoField
-	dbg.Lvl5("Starting for", sval)
 	defer func() {
 		if r := recover(); r != nil {
 			if index != nil {
@@ -76,14 +73,12 @@ func (en *encoder) message(sval reflect.Value) {
 	for i, index = range ProtoFields(sval.Type()) {
 		field := sval.FieldByIndex(index.Index)
 		key := uint64(index.ID) << 3
-		s := sval.Type().Field(i)
-		dbg.Lvl5("Encoding", sval.Type(), s.Name, s.Type, field.Type())
-		//fmt.Printf("field %d: %s %v\n", 1+i,
-		//		sval.Type().Field(i).Name, field.CanSet())
+		//s := sval.Type().Field(i)
+		//fmt.Print("Encoding", sval.Type(), s.Name, s.Type, field.Type())
 		if field.CanSet() { // Skip blank/padding fields
 			en.value(key, field, index.Prefix)
 		}
-		dbg.Lvl5("Done encoding", sval.Type(), s.Name, s.Type, field.Type())
+		//fmt.Print("Done encoding", sval.Type(), s.Name, s.Type, field.Type())
 	}
 }
 
