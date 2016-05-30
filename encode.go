@@ -72,11 +72,11 @@ func (en *encoder) message(sval reflect.Value) {
 	for _, index = range ProtoFields(sval.Type()) {
 		field := sval.FieldByIndex(index.Index)
 		key := uint64(index.ID) << 3
-		//fmt.Printf("field %d: %s %v\n", 1+i,
-		//		sval.Type().Field(i).Name, field.CanSet())
+		//fmt.Print("Encoding", sval.Type(), index.Name, index.Type, field.Type())
 		if field.CanSet() { // Skip blank/padding fields
 			en.value(key, field, index.Prefix)
 		}
+		//fmt.Print("Done encoding", sval.Type(), index.Name, index.Type, field.Type())
 	}
 }
 

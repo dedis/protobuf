@@ -84,29 +84,33 @@ func (de *decoder) message(buf []byte, sval reflect.Value) error {
 		// Leave field with a zero Value if fieldnum is out-of-range.
 		// In this case, as well as for blank fields,
 		// value() will just skip over and discard the field content.
-		var field reflect.Value
 		for fieldi < len(fields) && fields[fieldi].ID < int64(fieldnum) {
 			fieldi++
 		}
-		// For fields within embedded structs, ensure the embedded values aren't nil.
-		if fieldi < len(fields) && fields[fieldi].ID == int64(fieldnum) {
-			index := fields[fieldi].Index
-			path := make([]int, 0, len(index))
-			for _, id := range index {
-				path = append(path, id)
-				field = sval.FieldByIndex(path)
-				if field.Kind() == reflect.Ptr && field.IsNil() {
-					field.Set(reflect.New(field.Type().Elem()))
+		// If we didn't skip everything, decode the value
+		if fieldi < len(fields) {
+			var field reflect.Value
+			// For fields within embedded structs, ensure the embedded values aren't nil.
+			if fields[fieldi].ID == int64(fieldnum) {
+				index := fields[fieldi].Index
+				path := make([]int, 0, len(index))
+				for _, id := range index {
+					path = append(path, id)
+					field = sval.FieldByIndex(path)
+					if field.Kind() == reflect.Ptr && field.IsNil() {
+						field.Set(reflect.New(field.Type().Elem()))
+					}
 				}
 			}
-		}
 
-		// Decode the field's value
-		rem, err := de.value(wiretype, buf, field)
-		if err != nil {
-			return fmt.Errorf("FieldName %s: %v", fields[fieldi].Name, err)
+			// Decode the field's value
+			rem, err := de.value(wiretype, buf, field)
+			if err != nil {
+				f := fields[fieldi].Field
+				return fmt.Errorf("FieldName #%d=%s/%s: %v", fieldi, f.Name, f.Type, err)
+			}
+			buf = rem
 		}
-		buf = rem
 	}
 	return nil
 }
