@@ -221,3 +221,5 @@ message PhoneNumber {
 ```
 
 Note: It can be quite tedious to manually synchronise the type and enum maps with the types in your package. I've found [pkgreflect](https://github.com/ungerik/pkgreflect) very useful for automating this.
+
+Note2: This is the v0-branch
