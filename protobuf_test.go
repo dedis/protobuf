@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-
 	//"encoding/hex"
 )
 
@@ -216,4 +215,24 @@ func TestTimeTypesEncodeDecode(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, in.Time.UnixNano(), out.Time.UnixNano())
 	assert.Equal(t, in.Duration, out.Duration)
+}
+
+type CipherText struct {
+	A, B int
+}
+type testMsg struct {
+	M map[uint32][]CipherText
+}
+
+func TestMapSliceStruct(t *testing.T) {
+	cv := []CipherText{{}, {}}
+	msg := &testMsg{
+		M: map[uint32][]CipherText{1: cv},
+	}
+	buf, err := Encode(msg)
+	assert.NoError(t, err)
+	msg2 := &testMsg{}
+	err = Decode(buf, msg2)
+	assert.NoError(t, err)
+	assert.Equal(t, len(msg.M[1]), len(msg2.M[1]))
 }
