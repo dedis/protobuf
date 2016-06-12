@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	//"encoding/hex"
+	"encoding/hex"
 )
 
 type emb struct {
@@ -218,7 +219,7 @@ func TestTimeTypesEncodeDecode(t *testing.T) {
 }
 
 type CipherText struct {
-	A, B *int32
+	A, B int32
 }
 
 type testMsg struct {
@@ -237,7 +238,16 @@ func TestMapSliceStruct(t *testing.T) {
 		M: map[uint32]*CipherArr{1: ca},
 	}
 	buf, err := Encode(msg)
-	//fmt.Println(hex.Dump(buf))
+	fmt.Println(hex.Dump(buf))
+	// optional
+	// 0a 08 08 01 12 04 0a 00  0a 00
+	// 0a 08 08 01 12 04 0a 00  0a 00
+	// required
+	// 00000000  0a 10 08 01 12 0c 0a 04  08 00 10 00 0a 04 08 00  |................|
+	// 00000010  10 00                                             |..|
+	// 00000000  0a 10 08 01 12 0c 0a 04  08 00 10 00 0a 04 08 00  |................|
+	// 00000010  10 00                                             |..|
+
 	assert.NoError(t, err)
 	msg2 := &testMsg{}
 	err = Decode(buf, msg2)
