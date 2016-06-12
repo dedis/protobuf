@@ -227,6 +227,7 @@ type testMsg struct {
 
 func TestMapSliceStruct(t *testing.T) {
 	// equivalent to the encoding to the following in a .proto file:
+	// details: https://developers.google.com/protocol-buffers/docs/proto#backwards-compatibility
 	/*
 	message cipherText {
 	  optional int32 a = 1;
@@ -242,7 +243,6 @@ func TestMapSliceStruct(t *testing.T) {
 	 repeated MapFieldEntry map_field = 1;
 	}
 	*/
-	// see: https://developers.google.com/protocol-buffers/docs/proto#backwards-compatibility
 	cv := []cipherText{{}, {}}
 	msg := &testMsg{
 		M: map[uint32][]cipherText{1: cv},
