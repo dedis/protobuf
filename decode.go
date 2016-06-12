@@ -422,7 +422,7 @@ func (de *decoder) mapEntry(slval reflect.Value, vb []byte) error {
 	if err != nil {
 		return err
 	}
-	for len(buf) > 0 {
+	for len(buf) > 0 { // for repeated values (slices etc)
 		key, n = binary.Uvarint(buf)
 		if n <= 0 {
 			return errors.New("bad protobuf field key")
