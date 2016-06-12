@@ -8,7 +8,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	//"encoding/hex"
-	"encoding/hex"
 )
 
 type emb struct {
@@ -218,39 +217,29 @@ func TestTimeTypesEncodeDecode(t *testing.T) {
 	assert.Equal(t, in.Duration, out.Duration)
 }
 
-type CipherText struct {
-	A, B int32
+type cipherText struct {
+	A, B *int32
 }
 
 type testMsg struct {
-	M map[uint32]*CipherArr
-}
-
-type CipherArr struct {
-	V []*CipherText
+	M map[uint32][]cipherText
 }
 
 func TestMapSliceStruct(t *testing.T) {
-	ct := []*CipherText{{},{}}
-	ca := &CipherArr{V: ct}
-
+	cv := []cipherText{{}, {}}
 	msg := &testMsg{
-		M: map[uint32]*CipherArr{1: ca},
+		M: map[uint32][]cipherText{1: cv},
 	}
-	buf, err := Encode(msg)
-	fmt.Println(hex.Dump(buf))
-	// optional
-	// 0a 08 08 01 12 04 0a 00  0a 00
-	// 0a 08 08 01 12 04 0a 00  0a 00
-	// required
-	// 00000000  0a 10 08 01 12 0c 0a 04  08 00 10 00 0a 04 08 00  |................|
-	// 00000010  10 00                                             |..|
-	// 00000000  0a 10 08 01 12 0c 0a 04  08 00 10 00 0a 04 08 00  |................|
-	// 00000010  10 00                                             |..|
 
+	buf, err := Encode(msg)
+	//fmt.Println(hex.Dump(buf))
 	assert.NoError(t, err)
+
 	msg2 := &testMsg{}
 	err = Decode(buf, msg2)
 	assert.NoError(t, err)
-	assert.Equal(t, len(msg.M[1].V), len(msg2.M[1].V))
+	//fmt.Printf("FYI:\n%#v\n", msg2)
+	//fmt.Printf("%#v\n", msg2)
+
+	assert.Equal(t, len(msg.M[1]), len(msg2.M[1]))
 }
