@@ -218,21 +218,29 @@ func TestTimeTypesEncodeDecode(t *testing.T) {
 }
 
 type CipherText struct {
-	A, B int
+	A, B *int32
 }
+
 type testMsg struct {
-	M map[uint32][]CipherText
+	M map[uint32]*CipherArr
+}
+
+type CipherArr struct {
+	V []*CipherText
 }
 
 func TestMapSliceStruct(t *testing.T) {
-	cv := []CipherText{{}, {}}
+	ct := []*CipherText{{},{}}
+	ca := &CipherArr{V: ct}
+
 	msg := &testMsg{
-		M: map[uint32][]CipherText{1: cv},
+		M: map[uint32]*CipherArr{1: ca},
 	}
 	buf, err := Encode(msg)
+	//fmt.Println(hex.Dump(buf))
 	assert.NoError(t, err)
 	msg2 := &testMsg{}
 	err = Decode(buf, msg2)
 	assert.NoError(t, err)
-	assert.Equal(t, len(msg.M[1]), len(msg2.M[1]))
+	assert.Equal(t, len(msg.M[1].V), len(msg2.M[1].V))
 }
