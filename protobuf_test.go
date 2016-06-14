@@ -217,32 +217,33 @@ func TestTimeTypesEncodeDecode(t *testing.T) {
 	assert.Equal(t, in.Duration, out.Duration)
 }
 
+// encoding of testMsg is equivalent to the encoding to the following in
+// a .proto file:
+/*
+message cipherText {
+  optional int32 a = 1;
+    optional int32 b = 2;
+}
+
+message MapFieldEntry {
+  required uint32 key = 1;
+  repeated cipherText value = 2;
+}
+
+message testMsg {
+ repeated MapFieldEntry map_field = 1;
+}
+*/
+// for details see:
+// https://developers.google.com/protocol-buffers/docs/proto#backwards-compatibility
+type testMsg struct {
+	M map[uint32][]cipherText
+}
 type cipherText struct {
 	A, B *int32
 }
 
-type testMsg struct {
-	M map[uint32][]cipherText
-}
-
 func TestMapSliceStruct(t *testing.T) {
-	// equivalent to the encoding to the following in a .proto file:
-	// details: https://developers.google.com/protocol-buffers/docs/proto#backwards-compatibility
-	/*
-	message cipherText {
-	  optional int32 a = 1;
-  	  optional int32 b = 2;
-	}
-
-	message MapFieldEntry {
-	  required uint32 key = 1;
-	  repeated cipherText value = 2;
-	}
-
-	message testMsg {
-	 repeated MapFieldEntry map_field = 1;
-	}
-	*/
 	cv := []cipherText{{}, {}}
 	msg := &testMsg{
 		M: map[uint32][]cipherText{1: cv},
