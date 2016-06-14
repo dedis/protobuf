@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-
 	//"encoding/hex"
 )
 
@@ -216,4 +215,49 @@ func TestTimeTypesEncodeDecode(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, in.Time.UnixNano(), out.Time.UnixNano())
 	assert.Equal(t, in.Duration, out.Duration)
+}
+
+// encoding of testMsg is equivalent to the encoding to the following in
+// a .proto file:
+/*
+message cipherText {
+  optional int32 a = 1;
+    optional int32 b = 2;
+}
+
+message MapFieldEntry {
+  required uint32 key = 1;
+  repeated cipherText value = 2;
+}
+
+message testMsg {
+ repeated MapFieldEntry map_field = 1;
+}
+*/
+// for details see:
+// https://developers.google.com/protocol-buffers/docs/proto#backwards-compatibility
+type testMsg struct {
+	M map[uint32][]cipherText
+}
+type cipherText struct {
+	A, B *int32
+}
+
+func TestMapSliceStruct(t *testing.T) {
+	cv := []cipherText{{}, {}}
+	msg := &testMsg{
+		M: map[uint32][]cipherText{1: cv},
+	}
+
+	buf, err := Encode(msg)
+	//fmt.Println(hex.Dump(buf))
+	assert.NoError(t, err)
+
+	msg2 := &testMsg{}
+	err = Decode(buf, msg2)
+	assert.NoError(t, err)
+	//fmt.Printf("FYI:\n%#v\n", msg2)
+	//fmt.Printf("%#v\n", msg2)
+
+	assert.Equal(t, len(msg.M[1]), len(msg2.M[1]))
 }
