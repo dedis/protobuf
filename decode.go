@@ -99,14 +99,14 @@ func (de *decoder) message(buf []byte, sval reflect.Value) error {
 					field.Set(reflect.New(field.Type().Elem()))
 				}
 			}
-		}
+			// Decode the field's value
+			rem, err := de.value(wiretype, buf, field)
+			if err != nil {
+				return fmt.Errorf("FieldName %s: %v", fields[fieldi].Name, err)
+			}
 
-		// Decode the field's value
-		rem, err := de.value(wiretype, buf, field)
-		if err != nil {
-			return fmt.Errorf("FieldName %s: %v", fields[fieldi].Name, err)
+			buf = rem
 		}
-		buf = rem
 	}
 	return nil
 }
