@@ -106,6 +106,8 @@ func (de *decoder) message(buf []byte, sval reflect.Value) error {
 			}
 
 			buf = rem
+		} else {
+			return errors.New("Passed buffer is too long for struct")
 		}
 	}
 	return nil

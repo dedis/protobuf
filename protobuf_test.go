@@ -261,3 +261,24 @@ func TestMapSliceStruct(t *testing.T) {
 
 	assert.Equal(t, len(msg.M[1]), len(msg2.M[1]))
 }
+
+// Testing a too long buffer
+func TestBufferTooLong(t *testing.T) {
+	cv := []cipherText{{}, {}}
+	msg := &testMsg{
+		M: map[uint32][]cipherText{1: cv},
+	}
+
+	buf, err := Encode(msg)
+	//fmt.Println(hex.Dump(buf))
+	assert.NoError(t, err)
+
+	buf2 := append(buf, byte(1))
+	msg2 := &testMsg{}
+	err = Decode(buf2, msg2)
+	assert.Error(t, err)
+	//fmt.Printf("FYI:\n%#v\n", msg2)
+	//fmt.Printf("%#v\n", msg2)
+
+	assert.Equal(t, len(msg.M[1]), len(msg2.M[1]))
+}
