@@ -261,3 +261,25 @@ func TestMapSliceStruct(t *testing.T) {
 
 	assert.Equal(t, len(msg.M[1]), len(msg2.M[1]))
 }
+
+// Testing a too long buffer
+func TestBufferTooLong(t *testing.T) {
+	cv := []cipherText{{}, {}}
+	msg := &testMsg{
+		M: map[uint32][]cipherText{1: cv},
+	}
+
+	buf, err := Encode(msg)
+	assert.NoError(t, err)
+
+	// Protobuf doesn't know the length of the buffer, it just tries
+	// to decode everything it gets, so we first need to quit the for-loop
+	// with a 'fieldnum' == 2 which is bigger than the last index in
+	// testMsg.
+	buf2 := append(buf, byte(16), byte(1))
+	msg2 := &testMsg{}
+	err = Decode(buf2, msg2)
+	assert.Error(t, err)
+
+	assert.Equal(t, len(msg.M[1]), len(msg2.M[1]))
+}

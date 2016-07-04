@@ -70,7 +70,7 @@ func (de *decoder) message(buf []byte, sval reflect.Value) error {
 	// Decode all the fields
 	fields := ProtoFields(sval.Type())
 	fieldi := 0
-	for len(buf) > 0 {
+	for len(buf) > 0 && fieldi < len(fields) {
 		// Parse the key
 		key, n := binary.Uvarint(buf)
 		if n <= 0 {
@@ -107,6 +107,9 @@ func (de *decoder) message(buf []byte, sval reflect.Value) error {
 
 			buf = rem
 		}
+	}
+	if len(buf) > 0 {
+		return errors.New("Passed buffer is too long for struct")
 	}
 	return nil
 }
