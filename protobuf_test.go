@@ -261,3 +261,21 @@ func TestMapSliceStruct(t *testing.T) {
 
 	assert.Equal(t, len(msg.M[1]), len(msg2.M[1]))
 }
+
+// Testing the error of the error-message
+func TestDecodeErrorError(t *testing.T) {
+	cv := []cipherText{{}, {}}
+	msg := &testMsg{
+		M: map[uint32][]cipherText{1: cv},
+	}
+
+	buf, err := Encode(msg)
+	assert.NoError(t, err)
+
+	buf2 := append(buf, byte(16))
+	msg2 := &testMsg{}
+	err = Decode(buf2, msg2)
+	assert.Error(t, err)
+
+	assert.Equal(t, len(msg.M[1]), len(msg2.M[1]))
+}
