@@ -272,7 +272,11 @@ func TestBufferTooLong(t *testing.T) {
 	buf, err := Encode(msg)
 	assert.NoError(t, err)
 
-	buf2 := append(buf, byte(1))
+	// Protobuf doesn't know the length of the buffer, it just tries
+	// to decode everything it gets, so we first need to quit the for-loop
+	// with a 'fieldnum' == 2 which is bigger than the last index in
+	// testMsg.
+	buf2 := append(buf, byte(16), byte(1))
 	msg2 := &testMsg{}
 	err = Decode(buf2, msg2)
 	assert.Error(t, err)
