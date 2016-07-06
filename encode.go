@@ -53,7 +53,16 @@ func Encode(structPtr interface{}) (bytes []byte, err error) {
 	if val.Kind() != reflect.Ptr {
 		return nil, errors.New("Encode takes a pointer to struct")
 	}
-	en.message(val.Elem())
+	bm := reflect.TypeOf((*encoding.BinaryMarshaler)(nil)).Elem()
+	if ok := val.Type().Implements(bm); ok {
+		bytes, err := val.Interface().(encoding.BinaryMarshaler).MarshalBinary()
+		if err != nil {
+			panic(err.Error())
+		}
+		en.Write(bytes)
+	} else {
+		en.message(val.Elem())
+	}
 	return en.Bytes(), nil
 }
 
@@ -220,12 +229,18 @@ func (en *encoder) value(key uint64, val reflect.Value, prefix TagPrefix) {
 
 	// Embedded messages.
 	case reflect.Struct: // embedded message
-		en.uvarint(key | 2)
-		emb := encoder{}
-		emb.message(val)
-		b := emb.Bytes()
-		en.uvarint(uint64(len(b)))
-		en.Write(b)
+		bm := reflect.TypeOf((*encoding.BinaryMarshaler)(nil)).Elem()
+		if ok := val.Addr().Type().Implements(bm); ok {
+			// If the object support self-encoding, use that.
+			en.binaryMarshal(key, val.Addr().Interface().(encoding.BinaryMarshaler))
+		} else {
+			en.uvarint(key | 2)
+			emb := encoder{}
+			emb.message(val)
+			b := emb.Bytes()
+			en.uvarint(uint64(len(b)))
+			en.Write(b)
+		}
 
 	// Length-delimited slices  or byte-vectors.
 	case reflect.Slice, reflect.Array:
@@ -250,13 +265,7 @@ func (en *encoder) value(key uint64, val reflect.Value, prefix TagPrefix) {
 
 		// If the object support self-encoding, use that.
 		if enc, ok := val.Interface().(encoding.BinaryMarshaler); ok {
-			en.uvarint(key | 2)
-			bytes, err := enc.MarshalBinary()
-			if err != nil {
-				panic(err.Error())
-			}
-			en.uvarint(uint64(len(bytes)))
-			en.Write(bytes)
+			en.binaryMarshal(key, enc)
 			return
 		}
 
@@ -270,6 +279,16 @@ func (en *encoder) value(key uint64, val reflect.Value, prefix TagPrefix) {
 	default:
 		panic(fmt.Sprintf("unsupported field Kind %d", val.Kind()))
 	}
+}
+
+func (en *encoder) binaryMarshal(key uint64, enc encoding.BinaryMarshaler) {
+	en.uvarint(key | 2)
+	bytes, err := enc.MarshalBinary()
+	if err != nil {
+		panic(err.Error())
+	}
+	en.uvarint(uint64(len(bytes)))
+	en.Write(bytes)
 }
 
 func (en *encoder) slice(key uint64, slval reflect.Value) {

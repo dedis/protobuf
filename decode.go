@@ -61,6 +61,12 @@ func DecodeWithConstructors(buf []byte, structPtr interface{}, cons Constructors
 	if val.Kind() != reflect.Ptr {
 		return errors.New("Decode has been given a non pointer type")
 	}
+	bm := reflect.TypeOf((*encoding.BinaryUnmarshaler)(nil)).Elem()
+	if val.Type().Implements(bm) {
+		// If the object support self-decoding, use that.
+		enc := val.Interface().(encoding.BinaryUnmarshaler)
+		return enc.UnmarshalBinary(buf)
+	}
 	return de.message(buf, val.Elem())
 }
 
@@ -265,6 +271,16 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 			t := time.Unix(sv/int64(time.Second), sv%int64(time.Second))
 			val.Set(reflect.ValueOf(t))
 			return nil
+		}
+		bm := reflect.TypeOf((*encoding.BinaryUnmarshaler)(nil)).Elem()
+		if ok := val.Addr().Type().Implements(bm); ok {
+			// If the object support self-decoding, use that.
+			if wiretype != 2 {
+				return errors.New(
+					"bad wiretype for bytes")
+			}
+			enc := val.Addr().Interface().(encoding.BinaryUnmarshaler)
+			return enc.UnmarshalBinary(vb)
 		}
 		if wiretype != 2 {
 			return errors.New("bad wiretype for embedded message")
