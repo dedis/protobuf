@@ -308,7 +308,7 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 		// Decode into the object the interface points to.
 		// XXX perhaps better ONLY to support self-decoding
 		// for interface fields?
-		return de.putvalue(wiretype, val.Elem(), v, vb)
+		return Decode(vb, val.Interface())
 
 	default:
 		panic("unsupported value kind " + val.Kind().String())
