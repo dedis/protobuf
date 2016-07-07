@@ -56,3 +56,35 @@ func TestBinaryMarshaler(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 99, wrapper2.N.Value())
 }
+
+type NumberNoMarshal interface {
+	Value() int
+}
+
+func NewNumberNoMarshal(n int) NumberNoMarshal {
+	return &IntNoMarshal{n}
+}
+
+type IntNoMarshal struct {
+	N int
+}
+
+func (i *IntNoMarshal) Value() int {
+	return i.N
+}
+
+type WrapperNoMarshal struct {
+	N NumberNoMarshal
+}
+
+func TestNoBinaryMarshaler(t *testing.T) {
+	wrapper := WrapperNoMarshal{NewNumberNoMarshal(99)}
+	buf, err := Encode(&wrapper)
+	assert.Nil(t, err)
+
+	wrapper2 := WrapperNoMarshal{NewNumberNoMarshal(0)}
+	err = Decode(buf, &wrapper2)
+
+	assert.Nil(t, err)
+	assert.Equal(t, 99, wrapper2.N.Value())
+}
