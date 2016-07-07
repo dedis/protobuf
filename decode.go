@@ -348,7 +348,7 @@ func (de *decoder) slice(slval reflect.Value, vb []byte) error {
 	// Decide on the wiretype to use for decoding.
 	var wiretype int
 	switch eltype.Kind() {
-	case reflect.Bool, reflect.Int32, reflect.Int64,
+	case reflect.Bool, reflect.Int, reflect.Int32, reflect.Int64,
 		reflect.Uint32, reflect.Uint64:
 		switch eltype {
 		case sfixed32type:

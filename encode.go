@@ -287,6 +287,11 @@ func (en *encoder) slice(key uint64, slval reflect.Value) {
 			packed.uvarint(v)
 		}
 
+	case []int:
+		for i := 0; i < sllen; i++ {
+			packed.svarint(int64(slt[i]))
+		}
+
 	case []int32:
 		for i := 0; i < sllen; i++ {
 			packed.svarint(int64(slt[i]))
