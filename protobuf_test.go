@@ -261,3 +261,28 @@ func TestMapSliceStruct(t *testing.T) {
 
 	assert.Equal(t, len(msg.M[1]), len(msg2.M[1]))
 }
+
+// type HashID []byte
+// type Proof []HashID
+type testProofMsg struct {
+	Proof Proof
+}
+
+type HashID []byte
+type Proof []HashID
+
+func TestSliceOfSlice(t *testing.T) {
+	proof := make([]HashID, 1)
+	proof[0] = []byte("random test message")
+	msg := &testProofMsg{
+		Proof: proof,
+	}
+	buf, err := Encode(msg)
+	//fmt.Println(hex.Dump(buf))
+	assert.NoError(t, err)
+
+	msg2 := &testProofMsg{}
+	err = Decode(buf, msg2)
+	assert.NoError(t, err)
+	assert.Equal(t, msg.Proof, msg2.Proof)
+}
