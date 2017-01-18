@@ -389,7 +389,7 @@ func (en *encoder) handleMap(key uint64, mpval reflect.Value, prefix TagPrefix) 
 				panic("proto: map has nil element")
 			}
 		case reflect.Slice, reflect.Array:
-			if mval.Elem().Type().Kind() != reflect.Uint8 {
+			if mval.Type().Elem().Kind() != reflect.Uint8 {
 				panic("protobuf: map only support []byte or string as repeated value")
 			}
 		}
