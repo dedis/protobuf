@@ -67,6 +67,7 @@ type test struct {
 	SUX64   []Ufixed64
 	SF32    []myfloat32
 	SF64    []myfloat64
+	SBytes  []mybytes
 	SString []mystring
 	SStruct []emb
 }
@@ -125,6 +126,7 @@ func (t1 *test) equal(t2 *test) bool {
 		eqrep(t1.SUX64, t2.SUX64) &&
 		eqrep(t1.SF32, t2.SF32) &&
 		eqrep(t1.SF64, t2.SF64) &&
+		eqrep(t1.SBytes, t2.SBytes) &&
 		eqrep(t1.SString, t2.SString) &&
 		eqrep(t1.SStruct, t2.SStruct)
 }
@@ -151,6 +153,7 @@ func TestProtobuf(t *testing.T) {
 		[]Sfixed32{11, -22, 33}, []Sfixed64{22, -33, 44},
 		[]Ufixed32{33, 44, 55}, []Ufixed64{44, 55, 66},
 		[]myfloat32{5.5, 6.6, 7.7}, []myfloat64{6.6, 7.7, 8.8},
+		[]mybytes{[]byte("the"), []byte("quick"), []byte("brown"), []byte("fox")},
 		[]mystring{"the", "quick", "brown", "fox"},
 		[]emb{emb{-1, "a"}, emb{-2, "b"}, emb{-3, "c"}},
 	}
