@@ -51,9 +51,8 @@ message test {
   repeated ufixed64 sux64 = 108 [packed=true];
   repeated float sf32 = 109 [packed=true];
   repeated double sf64 = 110 [packed=true];
-  repeated bytes sbytes = 111;
-  repeated string sstring = 112;
-  repeated emb sstruct = 113;
+  repeated string sstring = 111;
+  repeated emb sstruct = 112;
 }
 
 `

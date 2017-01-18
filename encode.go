@@ -441,6 +441,9 @@ func (en *encoder) sliceReflect(key uint64, slval reflect.Value) {
 		en.Write(b)
 		return
 
+	case reflect.Slice, reflect.Array:
+		panic("protobuf: no support for multi-dimensional array")
+
 	default: // Write each element as a separate key,value pair
 		for i := 0; i < sllen; i++ {
 			en.value(key, slval.Index(i), TagNone)
