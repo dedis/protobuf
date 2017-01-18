@@ -3,7 +3,6 @@ package protobuf
 import (
 	"testing"
 
-	"github.com/dedis/cothority/log"
 	"github.com/dedis/crypto/abstract"
 	"github.com/dedis/crypto/ed25519"
 )
@@ -35,18 +34,21 @@ func BenchmarkEncode(b *testing.B) {
 		}
 
 	}
-	log.Lvl1("Done setting up")
 	Msg := &Message{}
 	var err error
 	Msg.Bytes, err = Encode(big)
-	log.ErrFatal(err)
+	if err != nil {
+		b.Fatal(err)
+	}
 	if len(Msg.Bytes) < x*y {
 		b.Fatal("Not enough data")
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		bytes, err := Encode(Msg)
-		log.ErrFatal(err)
+		if err != nil {
+			b.Fatal(err)
+		}
 		if len(bytes) < x*y {
 			b.Fatal("Message not long enough")
 		}
