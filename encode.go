@@ -381,10 +381,19 @@ func (en *encoder) handleMap(key uint64, mpval reflect.Value, prefix TagPrefix) 
 	for _, mkey := range mpval.MapKeys() {
 		mval := mpval.MapIndex(mkey)
 
-		// The only illegal map entry values are nil message pointers.
-		if mval.Kind() == reflect.Ptr && mval.IsNil() {
-			panic("proto: map has nil element")
+		// illegal map entry values
+		// - nil message pointers.
+		switch kind := mval.Kind(); kind {
+		case reflect.Ptr:
+			if mval.IsNil() {
+				panic("proto: map has nil element")
+			}
+		case reflect.Slice, reflect.Array:
+			if mval.Elem().Type().Kind() != reflect.Uint8 {
+				panic("protobuf: map only support []byte or string as repeated value")
+			}
 		}
+
 		packed := encoder{}
 		packed.value(key, mkey, prefix)
 		fieldId := uint64(key >> 3)
