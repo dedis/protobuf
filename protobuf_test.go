@@ -3,6 +3,7 @@ package protobuf
 import (
 	"bytes"
 	"fmt"
+	"reflect"
 	"testing"
 	"time"
 
@@ -236,28 +237,40 @@ message testMsg {
 */
 // for details see:
 // https://developers.google.com/protocol-buffers/docs/proto#backwards-compatibility
-type testMsg struct {
+type wrongTestMsg struct {
 	M map[uint32][]cipherText
 }
+
+type rightTestMsg struct {
+	M map[uint32]*cipherText
+}
 type cipherText struct {
-	A, B *int32
+	A, B int32
 }
 
 func TestMapSliceStruct(t *testing.T) {
 	cv := []cipherText{{}, {}}
-	msg := &testMsg{
+	msg := &wrongTestMsg{
 		M: map[uint32][]cipherText{1: cv},
 	}
 
-	buf, err := Encode(msg)
+	_, err := Encode(msg)
 	//fmt.Println(hex.Dump(buf))
+	assert.Error(t, err)
+
+	msg2 := &rightTestMsg{
+		M: map[uint32]*cipherText{1: {4, 5}},
+	}
+
+	buff, err := Encode(msg2)
 	assert.NoError(t, err)
 
-	msg2 := &testMsg{}
-	err = Decode(buf, msg2)
+	dec := &rightTestMsg{}
+	err = Decode(buff, dec)
 	assert.NoError(t, err)
+
+	assert.True(t, reflect.DeepEqual(dec, msg2))
 	//fmt.Printf("FYI:\n%#v\n", msg2)
 	//fmt.Printf("%#v\n", msg2)
 
-	assert.Equal(t, len(msg.M[1]), len(msg2.M[1]))
 }
