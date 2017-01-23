@@ -343,6 +343,16 @@ func (en *encoder) slice(key uint64, slval reflect.Value) {
 		en.Write(slt)
 		return
 
+	case []string:
+		for i := 0; i < sllen; i++ {
+			subVal := slval.Index(i)
+			subStr := subVal.Interface().(string)
+			subSlice := []byte(subStr)
+			en.uvarint(key | 2)
+			en.uvarint(uint64(len(subSlice)))
+			en.Write(subSlice)
+		}
+
 	default: // We'll need to use the reflective path
 		en.sliceReflect(key, slval)
 		return
@@ -371,10 +381,19 @@ func (en *encoder) handleMap(key uint64, mpval reflect.Value, prefix TagPrefix) 
 	for _, mkey := range mpval.MapKeys() {
 		mval := mpval.MapIndex(mkey)
 
-		// The only illegal map entry values are nil message pointers.
-		if mval.Kind() == reflect.Ptr && mval.IsNil() {
-			panic("proto: map has nil element")
+		// illegal map entry values
+		// - nil message pointers.
+		switch kind := mval.Kind(); kind {
+		case reflect.Ptr:
+			if mval.IsNil() {
+				panic("proto: map has nil element")
+			}
+		case reflect.Slice, reflect.Array:
+			if mval.Type().Elem().Kind() != reflect.Uint8 {
+				panic("protobuf: map only support []byte or string as repeated value")
+			}
 		}
+
 		packed := encoder{}
 		packed.value(key, mkey, prefix)
 		fieldId := uint64(key >> 3)
@@ -441,10 +460,15 @@ func (en *encoder) sliceReflect(key uint64, slval reflect.Value) {
 		en.Write(b)
 		return
 
-	case reflect.Slice, reflect.Array:
-		panic("protobuf: no support for multi-dimensional array")
-
 	default: // Write each element as a separate key,value pair
+		t := slval.Type().Elem()
+		if t.Kind() == reflect.Slice || t.Kind() == reflect.Array {
+			subSlice := t.Elem()
+			if subSlice.Kind() != reflect.Uint8 {
+				panic("protobuf: no support for 2-dimensional array except for [][]byte")
+			}
+		}
+
 		for i := 0; i < sllen; i++ {
 			en.value(key, slval.Index(i), TagNone)
 		}

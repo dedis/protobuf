@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 	// for more human friendly hex dump output (first ... last 3 bytes):
 	// goprotobuf "github.com/golang/protobuf/proto"
 )
@@ -124,4 +126,18 @@ func TestMapFieldWithNil(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Marshal of bad map should have failed, got these bytes: %v", b)
 	}
+}
+
+type WrongMap struct {
+	Map map[string][]uint32
+}
+
+func TestMapWrongSliceValue(t *testing.T) {
+	w := &WrongMap{}
+	w.Map = make(map[string][]uint32)
+	w.Map["hello"] = []uint32{1, 2, 3}
+	w.Map["world"] = []uint32{4, 5, 6}
+
+	_, err := Encode(w)
+	assert.NotNil(t, err)
 }

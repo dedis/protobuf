@@ -3,6 +3,7 @@ package protobuf
 import (
 	"bytes"
 	"fmt"
+	"reflect"
 	"testing"
 	"time"
 
@@ -67,6 +68,7 @@ type test struct {
 	SUX64   []Ufixed64
 	SF32    []myfloat32
 	SF64    []myfloat64
+	SBytes  []mybytes
 	SString []mystring
 	SStruct []emb
 }
@@ -125,6 +127,7 @@ func (t1 *test) equal(t2 *test) bool {
 		eqrep(t1.SUX64, t2.SUX64) &&
 		eqrep(t1.SF32, t2.SF32) &&
 		eqrep(t1.SF64, t2.SF64) &&
+		eqrep(t1.SBytes, t2.SBytes) &&
 		eqrep(t1.SString, t2.SString) &&
 		eqrep(t1.SStruct, t2.SStruct)
 }
@@ -151,6 +154,7 @@ func TestProtobuf(t *testing.T) {
 		[]Sfixed32{11, -22, 33}, []Sfixed64{22, -33, 44},
 		[]Ufixed32{33, 44, 55}, []Ufixed64{44, 55, 66},
 		[]myfloat32{5.5, 6.6, 7.7}, []myfloat64{6.6, 7.7, 8.8},
+		[]mybytes{[]byte("the"), []byte("quick"), []byte("brown"), []byte("fox")},
 		[]mystring{"the", "quick", "brown", "fox"},
 		[]emb{emb{-1, "a"}, emb{-2, "b"}, emb{-3, "c"}},
 	}
@@ -214,47 +218,57 @@ func TestTimeTypesEncodeDecode(t *testing.T) {
 	assert.Equal(t, in.Duration, out.Duration)
 }
 
-// encoding of testMsg is equivalent to the encoding to the following in
-// a .proto file:
-/*
-message cipherText {
-  optional int32 a = 1;
-    optional int32 b = 2;
-}
+/*encoding of testMsg is equivalent to the encoding to the following in*/
+//a .proto file:
+//	  message cipherText {
+//	  int32 a = 1;
+//	  int32 b = 2;
+//	  }
 
-message MapFieldEntry {
-  required uint32 key = 1;
-  repeated cipherText value = 2;
-}
+//	  message MapFieldEntry {
+//	  uint32 key = 1;
+//	  cipherText value = 2;
+//	  }
 
-message testMsg {
- repeated MapFieldEntry map_field = 1;
-}
-*/
-// for details see:
-// https://developers.google.com/protocol-buffers/docs/proto#backwards-compatibility
-type testMsg struct {
+//	  message testMsg {
+//	  repeated MapFieldEntry map_field = 1;
+//	  }
+//for details see:
+/*https://developers.google.com/protocol-buffers/docs/proto#backwards-compatibility*/
+type wrongTestMsg struct {
 	M map[uint32][]cipherText
 }
+
+type rightTestMsg struct {
+	M map[uint32]*cipherText
+}
 type cipherText struct {
-	A, B *int32
+	A, B int32
 }
 
 func TestMapSliceStruct(t *testing.T) {
 	cv := []cipherText{{}, {}}
-	msg := &testMsg{
+	msg := &wrongTestMsg{
 		M: map[uint32][]cipherText{1: cv},
 	}
 
-	buf, err := Encode(msg)
+	_, err := Encode(msg)
 	//fmt.Println(hex.Dump(buf))
+	assert.Error(t, err)
+
+	msg2 := &rightTestMsg{
+		M: map[uint32]*cipherText{1: {4, 5}},
+	}
+
+	buff, err := Encode(msg2)
 	assert.NoError(t, err)
 
-	msg2 := &testMsg{}
-	err = Decode(buf, msg2)
+	dec := &rightTestMsg{}
+	err = Decode(buff, dec)
 	assert.NoError(t, err)
+
+	assert.True(t, reflect.DeepEqual(dec, msg2))
 	//fmt.Printf("FYI:\n%#v\n", msg2)
 	//fmt.Printf("%#v\n", msg2)
 
-	assert.Equal(t, len(msg.M[1]), len(msg2.M[1]))
 }

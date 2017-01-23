@@ -88,3 +88,22 @@ func TestNoBinaryMarshaler(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 99, wrapper2.N.Value())
 }
+
+type WrongSliceInt struct {
+	Ints [][]int
+}
+type WrongSliceUint struct {
+	UInts [][]uint16
+}
+
+func TestNo2dSlice(t *testing.T) {
+	w := &WrongSliceInt{}
+	w.Ints = [][]int{[]int{1, 2, 3}, []int{4, 5, 6}}
+	_, err := Encode(w)
+	assert.NotNil(t, err)
+
+	w2 := &WrongSliceUint{}
+	w2.UInts = [][]uint16{[]uint16{1, 2, 3}, []uint16{4, 5, 6}}
+	_, err = Encode(w2)
+	assert.NotNil(t, err)
+}
