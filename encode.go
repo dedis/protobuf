@@ -175,7 +175,6 @@ func (en *encoder) value(key uint64, val reflect.Value, prefix TagPrefix) {
 		en.uvarint(uint64(len(v)))
 		en.Write(v)
 		return
-
 	}
 
 	// Handle pointer or interface values (possibly within slices).
@@ -352,7 +351,7 @@ func (en *encoder) slice(key uint64, slval reflect.Value) {
 			en.uvarint(uint64(len(subSlice)))
 			en.Write(subSlice)
 		}
-
+		return
 	default: // We'll need to use the reflective path
 		en.sliceReflect(key, slval)
 		return
