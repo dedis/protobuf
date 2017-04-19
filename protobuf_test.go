@@ -9,6 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	//"encoding/hex"
+	"github.com/dedis/crypto/abstract"
+	"github.com/dedis/crypto/edwards"
 )
 
 type emb struct {
@@ -271,4 +273,19 @@ func TestMapSliceStruct(t *testing.T) {
 	//fmt.Printf("FYI:\n%#v\n", msg2)
 	//fmt.Printf("%#v\n", msg2)
 
+}
+
+func TestMultidimensionalSlices(t *testing.T) {
+	testSuite := edwards.NewAES128SHA256Ed25519(false)
+	a, b, c, d := testSuite.Point(), testSuite.Point(), testSuite.Point(), testSuite.Point()
+	keys := make([][]abstract.Point, 2)
+	keys[0] = make([]abstract.Point, 2)
+	keys[1] = make([]abstract.Point, 2)
+	keys[0][0] = a
+	keys[0][1] = b
+	keys[1][0] = c
+	keys[1][1] = d
+
+	_, err := Encode(&keys)
+	assert.NoError(t, err)
 }
