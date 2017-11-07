@@ -3,8 +3,8 @@ package protobuf
 import (
 	"testing"
 
-	"github.com/dedis/crypto/abstract"
-	"github.com/dedis/crypto/ed25519"
+	"gopkg.in/dedis/crypto.v0/abstract"
+	"gopkg.in/dedis/crypto.v0/ed25519"
 )
 
 var Suite = ed25519.NewAES128SHA256Ed25519(false)
