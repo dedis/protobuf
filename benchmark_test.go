@@ -3,14 +3,14 @@ package protobuf
 import (
 	"testing"
 
-	"github.com/dedis/crypto/abstract"
-	"github.com/dedis/crypto/ed25519"
+	"github.com/dedis/kyber"
+	"github.com/dedis/kyber/group/edwards25519"
 )
 
-var Suite = ed25519.NewAES128SHA256Ed25519(false)
+var Suite = edwards25519.NewAES128SHA256Ed25519()
 
 type OneDimension struct {
-	Points []abstract.Point
+	Points []kyber.Point
 }
 
 type TwoDimension struct {
@@ -28,7 +28,7 @@ func BenchmarkEncode(b *testing.B) {
 		Points: make([]OneDimension, x),
 	}
 	for i := range big.Points {
-		big.Points[i].Points = make([]abstract.Point, y)
+		big.Points[i].Points = make([]kyber.Point, y)
 		for j := range big.Points[i].Points {
 			big.Points[i].Points[j] = Suite.Point().Base()
 		}
