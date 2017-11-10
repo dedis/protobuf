@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	//"encoding/hex"
 )
 
 type emb struct {
@@ -160,7 +159,6 @@ func TestProtobuf(t *testing.T) {
 	}
 	buf, err := Encode(&t1)
 	assert.NoError(t, err)
-	//fmt.Printf("Encoding:\n%s",hex.Dump(buf))
 
 	t2 := test{}
 	err = Decode(buf, &t2)
@@ -183,7 +181,6 @@ func TestPadded(t *testing.T) {
 	t1.Field5 = 50
 	buf, err := Encode(&t1)
 	assert.NoError(t, err)
-	//fmt.Printf("Encoding:\n%s",hex.Dump(buf))
 
 	t2 := padded{}
 	err = Decode(buf, &t2)
@@ -253,7 +250,6 @@ func TestMapSliceStruct(t *testing.T) {
 	}
 
 	_, err := Encode(msg)
-	//fmt.Println(hex.Dump(buf))
 	assert.Error(t, err)
 
 	msg2 := &rightTestMsg{
@@ -268,7 +264,4 @@ func TestMapSliceStruct(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.True(t, reflect.DeepEqual(dec, msg2))
-	//fmt.Printf("FYI:\n%#v\n", msg2)
-	//fmt.Printf("%#v\n", msg2)
-
 }

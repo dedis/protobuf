@@ -15,19 +15,16 @@ import (
 // data. The keys are reflect.Type values denoting interface types. The
 // corresponding values are functions expected to instantiate, and initialize
 // as necessary, an appropriate concrete object type supporting that
-// interface.
-//
-// The Dissent crypto library uses this capability, for example, to support
-// dynamic instantiation of Point and Secret objects of the concrete type
-// appropriate for a given abstract.Suite.
-//
+// interface. A caller could use this capability to support
+// dynamic instantiation of objects of the concrete type
+// appropriate for a given abstract type.
 type Constructors map[reflect.Type]func() interface{}
 
 // String returns an easy way to visualize what you have in your constructors.
 func (c *Constructors) String() string {
 	var s string
 	for k, v := range *c {
-		s += k.String() + "=>" + fmt.Sprintf("%+v", v) + "\t"
+		s += k.String() + "=>" + fmt.Sprintf("%#v", v) + "\t"
 	}
 	return s
 }
