@@ -64,6 +64,9 @@ func DecodeWithConstructors(buf []byte, structPtr interface{}, cons Constructors
 // Decode a Protocol Buffers message into a Go struct.
 // The Kind of the passed value v must be Struct.
 func (de *decoder) message(buf []byte, sval reflect.Value) error {
+	if sval.Kind() != reflect.Struct {
+		return errors.New("not a struct")
+	}
 	// Decode all the fields
 	fields := ProtoFields(sval.Type())
 	fieldi := 0
@@ -102,7 +105,7 @@ func (de *decoder) message(buf []byte, sval reflect.Value) error {
 		rem, err := de.value(wiretype, buf, field)
 		if err != nil {
 			if fieldi < len(fields) && fields[fieldi] != nil {
-				return fmt.Errorf("Error while decding FieldName %s: %v", fields[fieldi].Name, err)
+				return fmt.Errorf("Error while decoding FieldName %s: %v", fields[fieldi].Name, err)
 			} else {
 				return err
 			}
@@ -373,7 +376,7 @@ func (de *decoder) slice(slval reflect.Value, vb []byte) error {
 	case reflect.Uint8: // Unpacked byte-slice
 		if slval.Kind() == reflect.Array {
 			if slval.Len() != len(vb) {
-				panic("Array length != buffer length")
+				return errors.New("array length and buffer length differ")
 			}
 			for i := 0; i < slval.Len(); i++ {
 				// no SetByte method in reflect so has to pass down by uint64
@@ -388,6 +391,9 @@ func (de *decoder) slice(slval reflect.Value, vb []byte) error {
 		// Just unpack and append one value from vb.
 		if err := de.putvalue(2, val, 0, vb); err != nil {
 			return err
+		}
+		if slval.Kind() != reflect.Slice {
+			return errors.New("append to non-slice")
 		}
 		slval.Set(reflect.Append(slval, val))
 		return nil
