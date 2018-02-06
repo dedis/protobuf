@@ -73,7 +73,7 @@ func (en *encoder) message(sval reflect.Value) {
 		field := sval.FieldByIndex(index.Index)
 		key := uint64(index.ID) << 3
 		//fmt.Printf("field %d: %s %v\n", 1+i,
-		//		sval.Type().Field(i).Name, field.CanSet())
+		//	sval.Type().Field(i).Name, field.CanSet())
 		if field.CanSet() { // Skip blank/padding fields
 			en.value(key, field, index.Prefix)
 		}
