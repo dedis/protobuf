@@ -161,7 +161,7 @@ func (de *decoder) value(wiretype int, buf []byte,
 			return nil, errors.New(
 				"bad protobuf length-delimited value")
 		}
-		vb = buf[n : n+int(v)]
+		vb = buf[n : n+int(v) : n+int(v)]
 		buf = buf[n+int(v):]
 
 	default:
