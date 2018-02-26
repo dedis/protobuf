@@ -46,6 +46,7 @@ type test struct {
 	Struct emb
 
 	OBool   *mybool `protobuf:"50"`
+	OI      *myint
 	OI32    *myint32
 	OI64    *myint64
 	OU32    *myuint32
@@ -57,6 +58,7 @@ type test struct {
 	OStruct *test
 
 	SBool   []mybool `protobuf:"100"`
+	SI      []myint
 	SI32    []myint32
 	SI64    []myint64
 	SU32    []myuint32
@@ -134,6 +136,7 @@ func (t1 *test) equal(t2 *test) bool {
 func TestProtobuf(t *testing.T) {
 
 	b0 := mybool(true)
+	i0 := myint(-1)
 	i1 := myint32(-1)
 	i2 := myint64(-2)
 	i3 := myuint32(3)
@@ -146,8 +149,9 @@ func TestProtobuf(t *testing.T) {
 
 	t1 := test{true, 0, -1, -2, 3, 4, -11, -22, 33, 44, 5.0, 6.0,
 		[]byte("789"), [2]byte{1, 2}, "abc", emb{123, "def"},
-		&b0, &i1, &i2, &i3, &i4, &f5, &f6, &b7, &s8, &e9,
+		&b0, &i0, &i1, &i2, &i3, &i4, &f5, &f6, &b7, &s8, &e9,
 		[]mybool{true, false, true},
+		[]myint{-1, 2, -3},
 		[]myint32{1, -2, 3}, []myint64{2, -3, 4},
 		[]myuint32{3, 4, 5}, []myuint64{4, 5, 6},
 		[]Sfixed32{11, -22, 33}, []Sfixed64{22, -33, 44},
