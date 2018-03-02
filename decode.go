@@ -198,7 +198,6 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 	if !val.CanSet() {
 		return nil
 	}
-
 	switch val.Kind() {
 	case reflect.Bool:
 		if wiretype != 0 {
@@ -212,6 +211,10 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 	// Signed integers may be encoded either zigzag-varint or fixed
 	// Note that protobufs don't support 8- or 16-bit ints.
 	case reflect.Int, reflect.Int32, reflect.Int64:
+		if val.Kind() == reflect.Int && val.Type().Size() < 8 {
+			panic("Detected a 32bit machine, please either use int64 or int32. " +
+				"However, ensure you are using the same size being used on the sender side not to lose information.")
+		}
 		sv, err := de.decodeSignedInt(wiretype, v)
 		if err != nil {
 			fmt.Println("Error Reflect.Int for v=", v, "wiretype=", wiretype, "for Value=", val.Type().Name())
@@ -220,7 +223,11 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 		val.SetInt(sv)
 
 	// Varint-encoded 32-bit and 64-bit unsigned integers.
-	case reflect.Uint32, reflect.Uint64:
+	case reflect.Uint, reflect.Uint32, reflect.Uint64:
+		if val.Kind() == reflect.Uint && val.Type().Size() < 8 {
+			panic("Detected a 32bit machine, please either use uint64 or uint32. " +
+				"However, ensure you are using the same size being used on the sender side not to lose information.")
+		}
 		if wiretype == 0 {
 			val.SetUint(v)
 		} else if wiretype == 5 { // ufixed32
@@ -342,6 +349,7 @@ var ufixed64type = reflect.TypeOf(Ufixed64(0))
 // Handle decoding of slices
 func (de *decoder) slice(slval reflect.Value, vb []byte) error {
 
+
 	// Find the element type, and create a temporary instance of it.
 	eltype := slval.Type().Elem()
 	val := reflect.New(eltype).Elem()
@@ -349,9 +357,14 @@ func (de *decoder) slice(slval reflect.Value, vb []byte) error {
 	// Decide on the wiretype to use for decoding.
 	var wiretype int
 	switch eltype.Kind() {
-	case reflect.Bool, reflect.Int32, reflect.Int64,
-		reflect.Uint32, reflect.Uint64:
+	case reflect.Bool, reflect.Int32, reflect.Int64, reflect.Int,
+		reflect.Uint32, reflect.Uint64, reflect.Uint:
+		if (eltype.Kind() == reflect.Int || eltype.Kind() == reflect.Uint) && eltype.Size() < 8 {
+			panic("Detected a 32bit machine, please either use (u)int64 or (u)int32. " +
+				"However, ensure you are using the same size being used on the sender side not to lose information.")
+		}
 		switch eltype {
+
 		case sfixed32type:
 			wiretype = 5 // Packed 32-bit representation
 		case sfixed64type:
