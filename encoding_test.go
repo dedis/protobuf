@@ -107,3 +107,35 @@ func TestNo2dSlice(t *testing.T) {
 	_, err = Encode(w2)
 	assert.NotNil(t, err)
 }
+
+type T struct {
+	Buf1, Buf2 []byte
+}
+
+func TestByteOverwrite(t *testing.T) {
+	t0 := T{
+		Buf1: []byte("abc"),
+		Buf2: []byte("def"),
+	}
+	buf, err := Encode(&t0)
+	assert.Nil(t, err)
+
+	var t1 T
+	err = Decode(buf, &t1)
+	assert.Nil(t, err)
+
+	assert.Equal(t, []byte("abc"), t1.Buf1)
+	assert.Equal(t, []byte("def"), t1.Buf2)
+
+	// now we trigger the bug that used to exist, by writing off the end of
+	// Buf1, over where the size was (the g and h) and onto the top of Buf2.
+	b1 := append(t1.Buf1, 'g', 'h', 'i')
+	assert.Equal(t, []byte("abcghi"), b1)
+	// Buf2 must be unchanged, even though Buf1 was written to. When the bug
+	// was present, Buf2 turns into "ief".
+	assert.Equal(t, []byte("def"), t1.Buf2)
+
+	// With the fix in place, the capacities must match the lengths.
+	assert.Equal(t, len(t1.Buf1), cap(t1.Buf1))
+	assert.Equal(t, len(t1.Buf2), cap(t1.Buf2))
+}
