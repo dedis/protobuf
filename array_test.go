@@ -3,9 +3,9 @@ package protobuf
 import (
 	"fmt"
 	"testing"
-	"github.com/stretchr/testify/assert"
 	"reflect"
 	"encoding/hex"
+	"github.com/stretchr/testify/require"
 )
 
 type ArrayTest0 struct {
@@ -65,5 +65,8 @@ func TestArray(t *testing.T){
 	Decode(buf3, &b3)
 	t.Log(b3, reflect.TypeOf(b3))
 
-	assert.True(t, true, nil)
+	require.Equal(t, a0, b0)
+	require.Equal(t, a1, b1)
+	require.Equal(t, a2, b2)
+	require.Equal(t, a3, b3)
 }
