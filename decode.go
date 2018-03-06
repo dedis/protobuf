@@ -215,7 +215,7 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 	// Note that protobufs don't support 8- or 16-bit ints.
 	case reflect.Int, reflect.Int32, reflect.Int64:
 		if val.Kind() == reflect.Int && val.Type().Size() < 8 {
-			return errors.New("detected a 32bit machine, please either use int64 or int32")
+			return errors.New("detected a 32bit machine, please use either int64 or int32")
 		}
 		sv, err := de.decodeSignedInt(wiretype, v)
 		if err != nil {
@@ -227,7 +227,7 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 	// Varint-encoded 32-bit and 64-bit unsigned integers.
 	case reflect.Uint, reflect.Uint32, reflect.Uint64:
 		if val.Kind() == reflect.Uint && val.Type().Size() < 8 {
-			return errors.New("detected a 32bit machine, please either use uint64 or uint32")
+			return errors.New("detected a 32bit machine, please use either uint64 or uint32")
 		}
 		if wiretype == 0 {
 			val.SetUint(v)
@@ -361,8 +361,7 @@ func (de *decoder) slice(slval reflect.Value, vb []byte) error {
 	case reflect.Bool, reflect.Int32, reflect.Int64, reflect.Int,
 		reflect.Uint32, reflect.Uint64, reflect.Uint:
 		if (eltype.Kind() == reflect.Int || eltype.Kind() == reflect.Uint) && eltype.Size() < 8 {
-			panic("Detected a 32bit machine, please either use (u)int64 or (u)int32. " +
-				"However, ensure you are using the same size being used on the sender side not to lose information.")
+			return errors.New("detected a 32bit machine, please either use (u)int64 or (u)int32")
 		}
 		switch eltype {
 
