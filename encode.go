@@ -51,7 +51,7 @@ func Encode(structPtr interface{}) (bytes []byte, err error) {
 	en := encoder{}
 	val := reflect.ValueOf(structPtr)
 	if val.Kind() != reflect.Ptr {
-		return nil, errors.New("Encode takes a pointer to struct")
+		return nil, errors.New("encode takes a pointer to struct")
 	}
 	en.message(val.Elem())
 	return en.Bytes(), nil
@@ -228,6 +228,7 @@ func (en *encoder) value(key uint64, val reflect.Value, prefix TagPrefix) {
 
 	// Length-delimited slices  or byte-vectors.
 	case reflect.Slice, reflect.Array:
+
 		en.slice(key, val)
 		return
 
@@ -353,6 +354,7 @@ func (en *encoder) slice(key uint64, slval reflect.Value) {
 		}
 		return
 	default: // We'll need to use the reflective path
+
 		en.sliceReflect(key, slval)
 		return
 	}
@@ -460,6 +462,7 @@ func (en *encoder) sliceReflect(key uint64, slval reflect.Value) {
 		return
 
 	default: // Write each element as a separate key,value pair
+
 		t := slval.Type().Elem()
 		if t.Kind() == reflect.Slice || t.Kind() == reflect.Array {
 			subSlice := t.Elem()
@@ -467,7 +470,6 @@ func (en *encoder) sliceReflect(key uint64, slval reflect.Value) {
 				panic("protobuf: no support for 2-dimensional array except for [][]byte")
 			}
 		}
-
 		for i := 0; i < sllen; i++ {
 			en.value(key, slval.Index(i), TagNone)
 		}
