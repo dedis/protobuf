@@ -54,6 +54,11 @@ func Encode(structPtr interface{}) (bytes []byte, err error) {
 		return nil, errors.New("encode takes a pointer to struct")
 	}
 	en.message(val.Elem())
+
+	if len(en.Bytes()) == 0 {
+		return nil, errors.New("struct has no serializable fields")
+	}
+
 	return en.Bytes(), nil
 }
 
