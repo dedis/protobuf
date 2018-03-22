@@ -109,6 +109,10 @@ func TestMapFieldRoundTrips(t *testing.T) {
 	}
 	for _, pair := range [][2]interface{}{
 		{m.NameMapping, m2.NameMapping},
+		{m.MsgMapping, m2.MsgMapping},
+		{m.ByteMapping, m2.ByteMapping},
+		{m.StrToStr, m2.StrToStr},
+		{m.StructMapping, m2.StructMapping},
 	} {
 		if !reflect.DeepEqual(pair[0], pair[1]) {
 			t.Errorf("Map did not survive a round trip.\ninitial: %v\n  final: %v", pair[0], pair[1])
