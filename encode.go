@@ -383,9 +383,8 @@ func (en *encoder) handleMap(key uint64, mpval reflect.Value, prefix TagPrefix) 
 		}
 
 		packed := encoder{}
-		packed.value(key, mkey, prefix)
-		fieldId := uint64(key >> 3)
-		packed.value(uint64(fieldId+1)<<3, mval, prefix)
+		packed.value(1<<3, mkey, prefix)
+		packed.value(2<<3, mval, prefix)
 
 		en.uvarint(key | 2)
 		b := packed.Bytes()
