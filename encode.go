@@ -216,7 +216,6 @@ func (en *encoder) value(key uint64, val reflect.Value, prefix TagPrefix) {
 
 	// Length-delimited slices  or byte-vectors.
 	case reflect.Slice, reflect.Array:
-
 		en.slice(key, val)
 		return
 
@@ -450,7 +449,6 @@ func (en *encoder) sliceReflect(key uint64, slval reflect.Value) {
 		return
 
 	default: // Write each element as a separate key,value pair
-
 		t := slval.Type().Elem()
 		if t.Kind() == reflect.Slice || t.Kind() == reflect.Array {
 			subSlice := t.Elem()
