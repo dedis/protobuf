@@ -23,8 +23,8 @@ type Constructors map[reflect.Type]func() interface{}
 // String returns an easy way to visualize what you have in your constructors.
 func (c *Constructors) String() string {
 	var s string
-	for k, v := range *c {
-		s += k.String() + "=>" + fmt.Sprintf("%#v", v) + "\t"
+	for k := range *c {
+		s += k.String() + "=>" + "(func() interface {})" + "\t"
 	}
 	return s
 }
@@ -349,8 +349,6 @@ var ufixed64type = reflect.TypeOf(Ufixed64(0))
 
 // Handle decoding of slices
 func (de *decoder) slice(slval reflect.Value, vb []byte) error {
-
-
 	// Find the element type, and create a temporary instance of it.
 	eltype := slval.Type().Elem()
 	val := reflect.New(eltype).Elem()
