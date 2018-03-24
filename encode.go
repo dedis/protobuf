@@ -341,7 +341,6 @@ func (en *encoder) slice(key uint64, slval reflect.Value) {
 		}
 		return
 	default: // We'll need to use the reflective path
-
 		en.sliceReflect(key, slval)
 		return
 	}
