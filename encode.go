@@ -51,7 +51,7 @@ func Encode(structPtr interface{}) (bytes []byte, err error) {
 	en := encoder{}
 	val := reflect.ValueOf(structPtr)
 	if val.Kind() != reflect.Ptr {
-		return nil, errors.New("Encode takes a pointer to struct")
+		return nil, errors.New("encode takes a pointer to struct")
 	}
 	en.message(val.Elem())
 	return en.Bytes(), nil
@@ -162,18 +162,6 @@ func (en *encoder) value(key uint64, val reflect.Value, prefix TagPrefix) {
 		b := []byte(v)
 		en.uvarint(uint64(len(b)))
 		en.Write(b)
-		return
-
-	case []byte:
-		if v == nil {
-			if prefix != TagOptional {
-				panic("passed nil []byte to required field")
-			}
-			return
-		}
-		en.uvarint(key | 2)
-		en.uvarint(uint64(len(v)))
-		en.Write(v)
 		return
 	}
 
@@ -466,7 +454,6 @@ func (en *encoder) sliceReflect(key uint64, slval reflect.Value) {
 				panic("protobuf: no support for 2-dimensional array except for [][]byte")
 			}
 		}
-
 		for i := 0; i < sllen; i++ {
 			en.value(key, slval.Index(i), TagNone)
 		}
