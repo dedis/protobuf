@@ -163,18 +163,6 @@ func (en *encoder) value(key uint64, val reflect.Value, prefix TagPrefix) {
 		en.uvarint(uint64(len(b)))
 		en.Write(b)
 		return
-
-	case []byte:
-		if v == nil {
-			if prefix != TagOptional {
-				panic("passed nil []byte to required field")
-			}
-			return
-		}
-		en.uvarint(key | 2)
-		en.uvarint(uint64(len(v)))
-		en.Write(v)
-		return
 	}
 
 	// Handle pointer or interface values (possibly within slices).
