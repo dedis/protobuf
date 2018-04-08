@@ -79,7 +79,7 @@ func (en *encoder) message(sval reflect.Value) {
 		}
 	}
 	if noPublicFields {
-		panic("struct has no serializable fields")
+		fmt.Println("struct has no serializable fields")
 	}
 }
 
