@@ -49,6 +49,11 @@ func Decode(buf []byte, structPtr interface{}) error {
 // DecodeWithConstructors is like Decode, but you can pass a map of
 // constructors with which to instantiate interface types.
 func DecodeWithConstructors(buf []byte, structPtr interface{}, cons Constructors) error {
+	defer func() {
+		if e := recover(); e != nil {
+			fmt.Println(e.(string))
+		}
+	}()
 	if structPtr == nil {
 		return nil
 	}
@@ -193,7 +198,14 @@ func (d *decoder) decodeSignedInt(wiretype int, v uint64) (int64, error) {
 }
 
 func (de *decoder) putvalue(wiretype int, val reflect.Value,
-	v uint64, vb []byte) error {
+	v uint64, vb []byte) (err error) {
+
+	// a panic might occur in cases reflect.Ptr or reflect.Interface
+	defer func() {
+		if e := recover(); e != nil {
+			err = errors.New(e.(string))
+		}
+	}()
 
 	// If val is not settable, it either represents an out-of-range field
 	// or an in-range but blank (padding) field in the struct.
