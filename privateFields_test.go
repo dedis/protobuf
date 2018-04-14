@@ -31,7 +31,7 @@ func TestPrivate(t *testing.T) {
 	t.Log(bufU, errU)
 	t.Log(bufE, errE)
 
-	assert.Error(t, errS)
-	assert.NoError(t, errU)
-	assert.NoError(t, errE)
+	assert.Equal(t, []byte(nil), bufS)
+	assert.Equal(t, []byte{0x8, 0x4a}, bufU)
+	assert.Equal(t, []byte{0xa, 0x1, 0x62}, bufE)
 }
