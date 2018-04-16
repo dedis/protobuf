@@ -72,8 +72,8 @@ func (en *encoder) message(sval reflect.Value) {
 	for _, index = range ProtoFields(sval.Type()) {
 		field := sval.FieldByIndex(index.Index)
 		key := uint64(index.ID) << 3
-		//fmt.Printf("field %d: %s %v\n", 1+i,
-		//	sval.Type().Field(i).Name, field.CanSet())
+		// fmt.Printf("field %d: %s %v\n", 1+i,
+		// 	sval.Type().Field(i).Name, field.CanSet())
 		if field.CanSet() { // Skip blank/padding fields
 			en.value(key, field, index.Prefix)
 		}
@@ -177,36 +177,36 @@ func (en *encoder) value(key uint64, val reflect.Value, prefix TagPrefix) {
 		}
 		en.uvarint(v)
 
-	// Varint-encoded 32-bit and 64-bit signed integers.
-	// Note that protobufs don't support 8- or 16-bit ints.
 	case reflect.Int, reflect.Int32, reflect.Int64:
+		// Varint-encoded 32-bit and 64-bit signed integers.
+		// Note that protobufs don't support 8- or 16-bit ints.
 		en.uvarint(key | 0)
 		en.svarint(val.Int())
 
-	// Varint-encoded 32-bit and 64-bit unsigned integers.
 	case reflect.Uint32, reflect.Uint64:
+		// Varint-encoded 32-bit and 64-bit unsigned integers.
 		en.uvarint(key | 0)
 		en.uvarint(val.Uint())
 
-	// Fixed-length 32-bit floats.
 	case reflect.Float32:
+		// Fixed-length 32-bit floats.
 		en.uvarint(key | 5)
 		en.u32(math.Float32bits(float32(val.Float())))
 
-	// Fixed-length 64-bit floats.
 	case reflect.Float64:
+		// Fixed-length 64-bit floats.
 		en.uvarint(key | 1)
 		en.u64(math.Float64bits(val.Float()))
 
-	// Length-delimited string.
 	case reflect.String:
+		// Length-delimited string.
 		en.uvarint(key | 2)
 		b := []byte(val.String())
 		en.uvarint(uint64(len(b)))
 		en.Write(b)
 
-	// Embedded messages.
-	case reflect.Struct: // embedded message
+	case reflect.Struct:
+		// Embedded messages.
 		en.uvarint(key | 2)
 		emb := encoder{}
 		emb.message(val)
@@ -214,13 +214,13 @@ func (en *encoder) value(key uint64, val reflect.Value, prefix TagPrefix) {
 		en.uvarint(uint64(len(b)))
 		en.Write(b)
 
-	// Length-delimited slices  or byte-vectors.
 	case reflect.Slice, reflect.Array:
+		// Length-delimited slices  or byte-vectors.
 		en.slice(key, val)
 		return
 
-	// Optional field: encode only if pointer is non-nil.
 	case reflect.Ptr:
+		// Optional field: encode only if pointer is non-nil.
 		if val.IsNil() {
 			if prefix == TagRequired {
 				panic("required field is nil")
@@ -229,8 +229,8 @@ func (en *encoder) value(key uint64, val reflect.Value, prefix TagPrefix) {
 		}
 		en.value(key, val.Elem(), prefix)
 
-	// Abstract interface field.
 	case reflect.Interface:
+		// Abstract interface field.
 		if val.IsNil() {
 			return
 		}
