@@ -69,8 +69,12 @@ func (en *encoder) message(sval reflect.Value) {
 		}
 	}()
 	// Encode all fields in-order
+	protoFields := ProtoFields(sval.Type())
+	if len(protoFields) == 0 {
+		return
+	}
 	noPublicFields := true
-	for _, index = range ProtoFields(sval.Type()) {
+	for _, index = range protoFields {
 		field := sval.FieldByIndex(index.Index)
 		key := uint64(index.ID) << 3
 		if field.CanSet() { // Skip blank/padding fields
@@ -79,7 +83,7 @@ func (en *encoder) message(sval reflect.Value) {
 		}
 	}
 	if noPublicFields {
-		fmt.Println("struct has no serializable fields")
+		panic("struct has no serializable fields")
 	}
 }
 
