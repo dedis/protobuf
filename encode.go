@@ -440,8 +440,7 @@ func (en *encoder) sliceReflect(key uint64, slval reflect.Value) {
 
 	case reflect.Float64:
 		for i := 0; i < sllen; i++ {
-			packed.u64(math.Float64bits(slval.Index(i).Float()
-                                 ))
+			packed.u64(math.Float64bits(slval.Index(i).Float()))
 		}
 
 	case reflect.Uint8: // Write the byte-slice as one key,value pair
