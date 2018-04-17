@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"text/template"
+	"errors"
 )
 
 const protoTemplate = `[[range $name, $values := .Enums]]
@@ -31,7 +32,13 @@ func typeIndirect(t reflect.Type) reflect.Type {
 	return t
 }
 
-func typeName(f ProtoField, enums enumTypeMap, renamer GeneratorNamer) string {
+func typeName(f ProtoField, enums enumTypeMap, renamer GeneratorNamer) (s string) {
+	defer func() {
+		if e := recover(); e != nil {
+			s = ""
+			panic(e.(string))
+		}
+	}()
 	t := f.Field.Type
 	if t.Kind() == reflect.Slice {
 		if t.Elem().Kind() == reflect.Uint8 {
@@ -204,7 +211,12 @@ type enumTypeMap map[string]enumValues
 
 // GenerateProtobufDefinition generates a .proto file from a list of structs via reflection.
 // fieldNamer is a function that maps ProtoField types to generated protobuf field names.
-func GenerateProtobufDefinition(w io.Writer, types []interface{}, enumMap EnumMap, renamer GeneratorNamer) error {
+func GenerateProtobufDefinition(w io.Writer, types []interface{}, enumMap EnumMap, renamer GeneratorNamer) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = errors.New(e.(string))
+		}
+	}()
 	enums := enumTypeMap{}
 	for name, value := range enumMap {
 		v := reflect.ValueOf(value)

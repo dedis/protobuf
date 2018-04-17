@@ -48,7 +48,12 @@ func Decode(buf []byte, structPtr interface{}) error {
 
 // DecodeWithConstructors is like Decode, but you can pass a map of
 // constructors with which to instantiate interface types.
-func DecodeWithConstructors(buf []byte, structPtr interface{}, cons Constructors) error {
+func DecodeWithConstructors(buf []byte, structPtr interface{}, cons Constructors) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = errors.New(e.(string))
+		}
+	}()
 	if structPtr == nil {
 		return nil
 	}
@@ -197,7 +202,6 @@ func (d *decoder) decodeSignedInt(wiretype int, v uint64) (int64, error) {
 
 func (de *decoder) putvalue(wiretype int, val reflect.Value,
 	v uint64, vb []byte) error {
-
 	// If val is not settable, it either represents an out-of-range field
 	// or an in-range but blank (padding) field in the struct.
 	// In this case, simply ignore and discard the field's content.
@@ -214,9 +218,9 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 		}
 		val.SetBool(v != 0)
 
-	// Signed integers may be encoded either zigzag-varint or fixed
-	// Note that protobufs don't support 8- or 16-bit ints.
 	case reflect.Int, reflect.Int32, reflect.Int64:
+		// Signed integers may be encoded either zigzag-varint or fixed
+		// Note that protobufs don't support 8- or 16-bit ints.
 		if val.Kind() == reflect.Int && val.Type().Size() < 8 {
 			return errors.New("detected a 32bit machine, please use either int64 or int32")
 		}
@@ -227,8 +231,8 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 		}
 		val.SetInt(sv)
 
-	// Varint-encoded 32-bit and 64-bit unsigned integers.
 	case reflect.Uint, reflect.Uint32, reflect.Uint64:
+		// Varint-encoded 32-bit and 64-bit unsigned integers.
 		if val.Kind() == reflect.Uint && val.Type().Size() < 8 {
 			return errors.New("detected a 32bit machine, please use either uint64 or uint32")
 		}
@@ -242,29 +246,29 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 			return errors.New("bad wiretype for uint")
 		}
 
-	// Fixed-length 32-bit floats.
 	case reflect.Float32:
+		// Fixed-length 32-bit floats.
 		if wiretype != 5 {
 			return errors.New("bad wiretype for float32")
 		}
 		val.SetFloat(float64(math.Float32frombits(uint32(v))))
 
-	// Fixed-length 64-bit floats.
 	case reflect.Float64:
+		// Fixed-length 64-bit floats.
 		if wiretype != 1 {
 			return errors.New("bad wiretype for float64")
 		}
 		val.SetFloat(math.Float64frombits(v))
 
-	// Length-delimited string.
 	case reflect.String:
+		// Length-delimited string.
 		if wiretype != 2 {
 			return errors.New("bad wiretype for string")
 		}
 		val.SetString(string(vb))
 
-	// Embedded message
 	case reflect.Struct:
+		// Embedded message
 		if val.Type() == timeType {
 			sv, err := de.decodeSignedInt(wiretype, v)
 			if err != nil {
@@ -279,16 +283,16 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 		}
 		return de.message(vb, val)
 
-	// Optional field
 	case reflect.Ptr:
+		// Optional field
 		// Instantiate pointer's element type.
 		if val.IsNil() {
 			val.Set(de.instantiate(val.Type().Elem()))
 		}
 		return de.putvalue(wiretype, val.Elem(), v, vb)
 
-	// Repeated field or byte-slice
 	case reflect.Slice, reflect.Array:
+		// Repeated field or byte-slice
 		if wiretype != 2 {
 			return errors.New("bad wiretype for repeated field")
 		}
