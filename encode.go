@@ -48,6 +48,9 @@ func Encode(structPtr interface{}) (bytes []byte, err error) {
 	if structPtr == nil {
 		return nil, nil
 	}
+	if isBinaryMarshaler(structPtr) {
+		return structPtr.(encoding.BinaryMarshaler).MarshalBinary()
+	}
 	en := encoder{}
 	val := reflect.ValueOf(structPtr)
 	if val.Kind() != reflect.Ptr {
@@ -170,18 +173,6 @@ func (en *encoder) value(key uint64, val reflect.Value, prefix TagPrefix) {
 		en.uvarint(uint64(len(b)))
 		en.Write(b)
 		return
-
-	case []byte:
-		if v == nil {
-			if prefix != TagOptional {
-				panic("passed nil []byte to required field")
-			}
-			return
-		}
-		en.uvarint(key | 2)
-		en.uvarint(uint64(len(v)))
-		en.Write(v)
-		return
 	}
 
 	// Handle pointer or interface values (possibly within slices).
@@ -196,36 +187,36 @@ func (en *encoder) value(key uint64, val reflect.Value, prefix TagPrefix) {
 		}
 		en.uvarint(v)
 
-	// Varint-encoded 32-bit and 64-bit signed integers.
-	// Note that protobufs don't support 8- or 16-bit ints.
 	case reflect.Int, reflect.Int32, reflect.Int64:
+		// Varint-encoded 32-bit and 64-bit signed integers.
+		// Note that protobufs don't support 8- or 16-bit ints.
 		en.uvarint(key | 0)
 		en.svarint(val.Int())
 
-	// Varint-encoded 32-bit and 64-bit unsigned integers.
 	case reflect.Uint32, reflect.Uint64:
+		// Varint-encoded 32-bit and 64-bit unsigned integers.
 		en.uvarint(key | 0)
 		en.uvarint(val.Uint())
 
-	// Fixed-length 32-bit floats.
 	case reflect.Float32:
+		// Fixed-length 32-bit floats.
 		en.uvarint(key | 5)
 		en.u32(math.Float32bits(float32(val.Float())))
 
-	// Fixed-length 64-bit floats.
 	case reflect.Float64:
+		// Fixed-length 64-bit floats.
 		en.uvarint(key | 1)
 		en.u64(math.Float64bits(val.Float()))
 
-	// Length-delimited string.
 	case reflect.String:
+		// Length-delimited string.
 		en.uvarint(key | 2)
 		b := []byte(val.String())
 		en.uvarint(uint64(len(b)))
 		en.Write(b)
 
-	// Embedded messages.
-	case reflect.Struct: // embedded message
+	case reflect.Struct:
+		// Embedded messages.
 		en.uvarint(key | 2)
 		emb := encoder{}
 		emb.message(val)
@@ -233,13 +224,13 @@ func (en *encoder) value(key uint64, val reflect.Value, prefix TagPrefix) {
 		en.uvarint(uint64(len(b)))
 		en.Write(b)
 
-	// Length-delimited slices  or byte-vectors.
 	case reflect.Slice, reflect.Array:
+		// Length-delimited slices  or byte-vectors.
 		en.slice(key, val)
 		return
 
-	// Optional field: encode only if pointer is non-nil.
 	case reflect.Ptr:
+		// Optional field: encode only if pointer is non-nil.
 		if val.IsNil() {
 			if prefix == TagRequired {
 				panic("required field is nil")
@@ -248,8 +239,8 @@ func (en *encoder) value(key uint64, val reflect.Value, prefix TagPrefix) {
 		}
 		en.value(key, val.Elem(), prefix)
 
-	// Abstract interface field.
 	case reflect.Interface:
+		// Abstract interface field.
 		if val.IsNil() {
 			return
 		}
@@ -449,7 +440,8 @@ func (en *encoder) sliceReflect(key uint64, slval reflect.Value) {
 
 	case reflect.Float64:
 		for i := 0; i < sllen; i++ {
-			packed.u64(math.Float64bits(slval.Index(i).Float()))
+			packed.u64(math.Float64bits(slval.Index(i).Float()
+                                 ))
 		}
 
 	case reflect.Uint8: // Write the byte-slice as one key,value pair
@@ -520,4 +512,9 @@ func (en *encoder) u64(v uint64) {
 	b[6] = byte(v >> 48)
 	b[7] = byte(v >> 56)
 	en.Write(b[:])
+}
+
+func isBinaryMarshaler (x interface{}) bool {
+	y := reflect.TypeOf((*encoding.BinaryMarshaler)(nil)).Elem()
+	return reflect.PtrTo(reflect.TypeOf(x)).Implements(y)
 }
