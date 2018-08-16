@@ -97,32 +97,33 @@ func (de *decoder) message(buf []byte, sval reflect.Value) error {
 			fieldi++
 		}
 
-		if fieldi < len(fields) {
+		if fieldi < len(fields) && fields[fieldi].ID == int64(fieldnum) {
 			// For fields within embedded structs, ensure the embedded values aren't nil.
-			if fields[fieldi].ID == int64(fieldnum) {
-				index := fields[fieldi].Index
-				path := make([]int, 0, len(index))
-				for _, id := range index {
-					path = append(path, id)
-					field = sval.FieldByIndex(path)
-					if field.Kind() == reflect.Ptr && field.IsNil() {
-						field.Set(reflect.New(field.Type().Elem()))
-					}
+			index := fields[fieldi].Index
+			path := make([]int, 0, len(index))
+			for _, id := range index {
+				path = append(path, id)
+				field = sval.FieldByIndex(path)
+				if field.Kind() == reflect.Ptr && field.IsNil() {
+					field.Set(reflect.New(field.Type().Elem()))
 				}
 			}
-
-			// Decode the field's value
-			// fmt.Printf("Decoding FieldName %+v\n", fields[fieldi].Field)
-			rem, err := de.value(wiretype, buf, field)
-			if err != nil {
-				if fields[fieldi] != nil {
-					return fmt.Errorf("Error while decoding field %v.%+v: %v", sval.Type(), fields[fieldi].Field.Name, err)
-				} else {
-					return err
-				}
-			}
-			buf = rem
 		}
+
+		// For more debugging output, uncomment the following three lines.
+		// if fieldi < len(fields){
+		//   fmt.Printf("Decoding FieldName %+v\n", fields[fieldi].Field)
+		// }
+		// Decode the field's value
+		rem, err := de.value(wiretype, buf, field)
+		if err != nil {
+			if fieldi < len(fields) && fields[fieldi] != nil {
+				return fmt.Errorf("Error while decoding field %v.%+v: %v", sval.Type(), fields[fieldi].Field.Name, err)
+			} else {
+				return err
+			}
+		}
+		buf = rem
 
 	}
 	return nil
