@@ -33,7 +33,7 @@ func TestCrash1(t *testing.T) {
 	var s t2
 	err = Decode(in, &s)
 	assert.NotNil(t, err)
-	assert.Equal(t, "Error while decoding field protobuf.t2.T3s: append to non-slice", err.Error())
+	assert.Equal(t, "Error while decoding field {Name:T3s PkgPath: Type:[3]protobuf.t3 Tag: Offset:112 Index:[4] Anonymous:false}: append to non-slice", err.Error())
 }
 
 func TestCrash2(t *testing.T) {
@@ -42,5 +42,5 @@ func TestCrash2(t *testing.T) {
 	var s t2
 	err := Decode(in, &s)
 	assert.NotNil(t, err)
-	assert.Equal(t, "Error while decoding field protobuf.t2.X: array length and buffer length differ", err.Error())
+	assert.Equal(t, "Error while decoding field {Name:X PkgPath: Type:protobuf.t1 Tag: Offset:0 Index:[0] Anonymous:false}: array length and buffer length differ", err.Error())
 }
