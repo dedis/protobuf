@@ -77,9 +77,14 @@ func (de *decoder) message(buf []byte, sval reflect.Value) error {
 	}
 	// Decode all the fields
 	fields := ProtoFields(sval.Type())
-	fieldi := 0
+	//fmt.Println("********************", sval.Type())
+	//	for _, f := range fields {
+	//		fmt.Println(f)
+	//	}
+
 	for len(buf) > 0 {
 		// Parse the key
+		fieldi := 0
 		key, n := binary.Uvarint(buf)
 		if n <= 0 {
 			return errors.New("bad protobuf field key")
@@ -87,26 +92,24 @@ func (de *decoder) message(buf []byte, sval reflect.Value) error {
 		buf = buf[n:]
 		wiretype := int(key & 7)
 		fieldnum := key >> 3
-
 		// Lookup the corresponding struct field.
 		// Leave field with a zero Value if fieldnum is out-of-range.
 		// In this case, as well as for blank fields,
 		// value() will just skip over and discard the field content.
 		var field reflect.Value
-		for fieldi < len(fields) && fields[fieldi].ID < int64(fieldnum) {
-			fieldi++
-		}
-
-		if fieldi < len(fields) && fields[fieldi].ID == int64(fieldnum) {
-			// For fields within embedded structs, ensure the embedded values aren't nil.
-			index := fields[fieldi].Index
-			path := make([]int, 0, len(index))
-			for _, id := range index {
-				path = append(path, id)
-				field = sval.FieldByIndex(path)
-				if field.Kind() == reflect.Ptr && field.IsNil() {
-					field.Set(reflect.New(field.Type().Elem()))
+		for fieldi = range fields {
+			if fields[fieldi].ID == int64(fieldnum) {
+				// For fields within embedded structs, ensure the embedded values aren't nil.
+				index := fields[fieldi].Index
+				path := make([]int, 0, len(index))
+				for _, id := range index {
+					path = append(path, id)
+					field = sval.FieldByIndex(path)
+					if field.Kind() == reflect.Ptr && field.IsNil() {
+						field.Set(reflect.New(field.Type().Elem()))
+					}
 				}
+				break
 			}
 		}
 
@@ -124,7 +127,6 @@ func (de *decoder) message(buf []byte, sval reflect.Value) error {
 			}
 		}
 		buf = rem
-
 	}
 	return nil
 }
