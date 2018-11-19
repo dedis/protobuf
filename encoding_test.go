@@ -2,6 +2,7 @@ package protobuf
 
 import (
 	"encoding"
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -138,4 +139,60 @@ func TestByteOverwrite(t *testing.T) {
 	// With the fix in place, the capacities must match the lengths.
 	assert.Equal(t, len(t1.Buf1), cap(t1.Buf1))
 	assert.Equal(t, len(t1.Buf2), cap(t1.Buf2))
+}
+
+type wrapper struct {
+	Int *big.Int
+}
+
+var zero = new(big.Int)
+var negone = new(big.Int).SetInt64(-1)
+
+func (w *wrapper) MarshalBinary() ([]byte, error) {
+	sign := []byte{0}
+	if w.Int.Cmp(zero) < 0 {
+		sign[0] = 1
+	}
+	return append(sign, w.Int.Bytes()...), nil
+}
+
+func (w *wrapper) UnmarshalBinary(in []byte) error {
+	if len(in) < 1 {
+		w.Int.SetInt64(0)
+		return nil
+	}
+	w.Int.SetBytes(in[1:])
+	if in[0] != 0 {
+		w.Int.Mul(w.Int, negone)
+	}
+	return nil
+}
+
+func TestBigInt(t *testing.T) {
+	v := wrapper{Int: new(big.Int)}
+	v2 := wrapper{Int: new(big.Int)}
+
+	v.Int.SetUint64(99)
+	buf, err := Encode(&v)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte{0, 99}, buf)
+	err = Decode(buf, &v2)
+	assert.NoError(t, err)
+	assert.Equal(t, "99", v2.Int.String())
+
+	v.Int.SetInt64(-99)
+	buf, err = Encode(&v)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte{1, 99}, buf)
+	err = Decode(buf, &v2)
+	assert.NoError(t, err)
+	assert.Equal(t, "-99", v2.Int.String())
+
+	v.Int.SetString("238756834756284658865287462349857298752354", 10)
+	buf, err = Encode(&v)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte{0x0, 0x2, 0xbd, 0xa4, 0xad, 0xbf, 0x98, 0xbd, 0x70, 0x26, 0xbd, 0x3b, 0x65, 0xe8, 0xae, 0xf3, 0xfa, 0xa3, 0x62}, buf)
+	err = Decode(buf, &v2)
+	assert.NoError(t, err)
+	assert.Equal(t, "238756834756284658865287462349857298752354", v2.Int.String())
 }

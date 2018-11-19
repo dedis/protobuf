@@ -57,9 +57,11 @@ func DecodeWithConstructors(buf []byte, structPtr interface{}, cons Constructors
 	if structPtr == nil {
 		return nil
 	}
-	if isBinaryUnmarsheler(structPtr) {
-		return structPtr.(encoding.BinaryUnmarshaler).UnmarshalBinary(buf)
+
+	if bu, ok := structPtr.(encoding.BinaryUnmarshaler); ok {
+		return bu.UnmarshalBinary(buf)
 	}
+
 	de := decoder{cons}
 	val := reflect.ValueOf(structPtr)
 	// if its NOT a pointer, it is bad return an error
@@ -471,9 +473,4 @@ func (de *decoder) mapEntry(slval reflect.Value, vb []byte) error {
 	slval.SetMapIndex(k, v)
 
 	return nil
-}
-
-func isBinaryUnmarsheler(x interface{}) bool {
-	y := reflect.TypeOf((*encoding.BinaryUnmarshaler)(nil)).Elem()
-	return reflect.PtrTo(reflect.TypeOf(x)).Implements(y)
 }

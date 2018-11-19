@@ -48,9 +48,11 @@ func Encode(structPtr interface{}) (bytes []byte, err error) {
 	if structPtr == nil {
 		return nil, nil
 	}
-	if isBinaryMarshaler(structPtr) {
-		return structPtr.(encoding.BinaryMarshaler).MarshalBinary()
+
+	if bu, ok := structPtr.(encoding.BinaryMarshaler); ok {
+		return bu.MarshalBinary()
 	}
+
 	en := encoder{}
 	val := reflect.ValueOf(structPtr)
 	if val.Kind() != reflect.Ptr {
@@ -511,9 +513,4 @@ func (en *encoder) u64(v uint64) {
 	b[6] = byte(v >> 48)
 	b[7] = byte(v >> 56)
 	en.Write(b[:])
-}
-
-func isBinaryMarshaler (x interface{}) bool {
-	y := reflect.TypeOf((*encoding.BinaryMarshaler)(nil)).Elem()
-	return reflect.PtrTo(reflect.TypeOf(x)).Implements(y)
 }
