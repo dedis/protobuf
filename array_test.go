@@ -1,10 +1,10 @@
 package protobuf
 
 import (
-	"fmt"
-	"testing"
-	"reflect"
 	"encoding/hex"
+	"reflect"
+	"testing"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -20,15 +20,11 @@ type ArrayTest2 struct {
 	A []int32
 }
 
-type ArrayTest3 struct{
+type ArrayTest3 struct {
 	A int
 }
 
-
-func TestArray(t *testing.T){
-
-	fmt.Println("TestArray:")
-
+func TestArray(t *testing.T) {
 	// largest int32 is 2147483647
 	var large int = 3147483647
 
@@ -46,7 +42,6 @@ func TestArray(t *testing.T){
 	t.Log(hex.Dump(buf1))
 	t.Log(hex.Dump(buf2))
 	t.Log(hex.Dump(buf3))
-
 
 	b0 := ArrayTest0{}
 	b1 := ArrayTest1{}
