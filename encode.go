@@ -227,7 +227,7 @@ func (en *encoder) value(key uint64, val reflect.Value, prefix TagPrefix) {
 		en.Write(b)
 
 	case reflect.Slice, reflect.Array:
-		// Length-delimited slices  or byte-vectors.
+		// Length-delimited slices or byte-vectors.
 		en.slice(key, val)
 		return
 
@@ -450,8 +450,14 @@ func (en *encoder) sliceReflect(key uint64, slval reflect.Value) {
 		en.uvarint(uint64(sllen))
 		var b []byte
 		if slval.Kind() == reflect.Array {
-			sliceVal := slval.Slice(0, sllen)
-			b = sliceVal.Convert(bytesType).Interface().([]byte)
+			if slval.CanAddr() {
+				sliceVal := slval.Slice(0, sllen)
+				b = sliceVal.Convert(bytesType).Interface().([]byte)
+			} else {
+				sliceVal := reflect.MakeSlice(bytesType, sllen, sllen)
+				reflect.Copy(sliceVal, slval)
+				b = sliceVal.Interface().([]byte)
+			}
 		} else {
 			b = slval.Convert(bytesType).Interface().([]byte)
 		}

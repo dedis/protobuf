@@ -196,3 +196,28 @@ func TestBigInt(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "238756834756284658865287462349857298752354", v2.Int.String())
 }
+
+func TestArrayKey(t *testing.T) {
+	type typ struct {
+		M map[[4]byte]bool
+	}
+	t0 := &typ{M: make(map[[4]byte]bool)}
+
+	var k1 [4]byte
+	k2 := [4]byte{0, 1, 2, 3}
+	k3 := [4]byte{5, 6, 7, 8}
+
+	t0.M[k1] = true
+	t0.M[k2] = true
+
+	buf, err := Encode(t0)
+	assert.NoError(t, err)
+	assert.Equal(t, 20, len(buf))
+
+	var t1 typ
+	err = Decode(buf, &t1)
+	assert.NoError(t, err)
+	assert.True(t, t1.M[k1])
+	assert.True(t, t1.M[k2])
+	assert.False(t, t1.M[k3])
+}
