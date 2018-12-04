@@ -254,7 +254,23 @@ func (en *encoder) value(key uint64, val reflect.Value, prefix TagPrefix) {
 			if err != nil {
 				panic(err.Error())
 			}
-			en.uvarint(uint64(len(bytes)))
+
+			size := len(bytes)
+			var id GeneratorID
+			im, ok := val.Interface().(InterfaceMarshaler)
+			if ok {
+				id = im.MarshalID()
+				ok = generators.has(id)
+
+				if ok {
+					size += len(id)
+				}
+			}
+
+			en.uvarint(uint64(size))
+			if ok {
+				en.Write(id[:])
+			}
 			en.Write(bytes)
 			return
 		}

@@ -121,9 +121,9 @@ func (de *decoder) message(buf []byte, sval reflect.Value) error {
 		if err != nil {
 			if fieldi < len(fields) && fields[fieldi] != nil {
 				return fmt.Errorf("Error while decoding field %+v: %v", fields[fieldi].Field, err)
-			} else {
-				return err
 			}
+
+			return err
 		}
 		buf = rem
 
@@ -192,7 +192,7 @@ func (de *decoder) value(wiretype int, buf []byte,
 	return buf, nil
 }
 
-func (d *decoder) decodeSignedInt(wiretype int, v uint64) (int64, error) {
+func (de *decoder) decodeSignedInt(wiretype int, v uint64) (int64, error) {
 	if wiretype == 0 { // encoded as varint
 		sv := int64(v) >> 1
 		if v&1 != 0 {
@@ -315,18 +315,30 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 		}
 		return de.mapEntry(val, vb)
 	case reflect.Interface:
+		data := vb[:]
+
 		// Abstract field: instantiate via dynamic constructor.
 		if val.IsNil() {
-			val.Set(de.instantiate(val.Type()))
+			id := GeneratorID{}
+			copy(id[:], vb[:len(id)])
+			g := generators.get(id)
+
+			if g == nil {
+				// Backwards compatible usage of the default constructors
+				val.Set(de.instantiate(val.Type()))
+			} else {
+				data = vb[len(id):]
+				val.Set(reflect.ValueOf(g()))
+			}
 		}
 
 		// If the object support self-decoding, use that.
 		if enc, ok := val.Interface().(encoding.BinaryUnmarshaler); ok {
 			if wiretype != 2 {
-				return errors.New(
-					"bad wiretype for bytes")
+				return errors.New("bad wiretype for bytes")
 			}
-			return enc.UnmarshalBinary(vb)
+
+			return enc.UnmarshalBinary(data)
 		}
 
 		// Decode into the object the interface points to.
