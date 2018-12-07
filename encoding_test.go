@@ -5,7 +5,10 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/dedis/kyber"
+	"github.com/dedis/kyber/suites"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type Number interface {
@@ -220,4 +223,31 @@ func TestArrayKey(t *testing.T) {
 	assert.True(t, t1.M[k1])
 	assert.True(t, t1.M[k2])
 	assert.False(t, t1.M[k3])
+}
+
+func TestInterface(t *testing.T) {
+	type Points struct {
+		P1 kyber.Point
+		P2 kyber.Point
+	}
+
+	bn256 := suites.MustFind("bn256.adapter")
+	ed25519 := suites.MustFind("ed25519")
+
+	RegisterInterface(func() interface{} { return bn256.Point() })
+	RegisterInterface(func() interface{} { return ed25519.Point() })
+
+	pp := Points{
+		P1: bn256.Point(),
+		P2: ed25519.Point(),
+	}
+
+	buf, err := Encode(&pp)
+	require.NoError(t, err)
+
+	var dpp Points
+	err = Decode(buf, &dpp)
+	require.NoError(t, err)
+	require.Equal(t, pp.P1.String(), dpp.P1.String())
+	require.Equal(t, pp.P2.String(), dpp.P2.String())
 }

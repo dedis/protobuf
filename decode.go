@@ -51,7 +51,7 @@ func Decode(buf []byte, structPtr interface{}) error {
 func DecodeWithConstructors(buf []byte, structPtr interface{}, cons Constructors) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = errors.New(e.(string))
+			err = e.(error)
 		}
 	}()
 	if structPtr == nil {
@@ -320,13 +320,18 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 		// Abstract field: instantiate via dynamic constructor.
 		if val.IsNil() {
 			id := GeneratorID{}
-			copy(id[:], vb[:len(id)])
-			g := generators.get(id)
+			var g InterfaceGeneratorFunc
+			if len(id) < len(vb) {
+				copy(id[:], vb[:len(id)])
+				g = generators.get(id)
+			}
 
 			if g == nil {
 				// Backwards compatible usage of the default constructors
 				val.Set(de.instantiate(val.Type()))
 			} else {
+				// As pointers to interface are discourage in Go, we use
+				// the generator only for interface types
 				data = vb[len(id):]
 				val.Set(reflect.ValueOf(g()))
 			}

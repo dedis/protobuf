@@ -30,21 +30,21 @@ func newInterfaceRegistry() *generatorRegistry {
 	}
 }
 
+// register gets the type tag and map it to the generator function
 func (ir *generatorRegistry) register(g InterfaceGeneratorFunc) {
-	val := g().(InterfaceMarshaler)
+	val, ok := g().(InterfaceMarshaler)
+	if !ok {
+		panic("Implementation of the interface must fulfilled InterfaceMarshaler")
+	}
 	key := val.MarshalID()
 
 	ir.generators[key] = g
 }
 
+// get returns the generator associated with the tag
 func (ir *generatorRegistry) get(key GeneratorID) InterfaceGeneratorFunc {
 	g, _ := ir.generators[key]
 	return g
-}
-
-func (ir *generatorRegistry) has(key GeneratorID) bool {
-	_, ok := ir.generators[key]
-	return ok
 }
 
 // RegisterInterface registers the generator to be used to decode
