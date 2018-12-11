@@ -5,3 +5,8 @@ notifications:
   # See http://about.travis-ci.org/docs/user/build-configuration/ to learn more
   # about configuring notification recipients and more.
   email: false
+
+before_script:
+  - cd ${TRAVIS_HOME}/gopath/src/github.com/dedis/kyber
+  - git checkout bn256_available
+  - cd ${TRAVIS_HOME}/gopath/src/github.com/dedis/protobuf
