@@ -330,7 +330,7 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 				// Backwards compatible usage of the default constructors
 				val.Set(de.instantiate(val.Type()))
 			} else {
-				// As pointers to interface are discourage in Go, we use
+				// As pointers to interface are discouraged in Go, we use
 				// the generator only for interface types
 				data = vb[len(id):]
 				val.Set(reflect.ValueOf(g()))
