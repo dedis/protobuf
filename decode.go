@@ -51,7 +51,7 @@ func Decode(buf []byte, structPtr interface{}) error {
 func DecodeWithConstructors(buf []byte, structPtr interface{}, cons Constructors) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = errors.New(e.(string))
+			err = e.(error)
 		}
 	}()
 	if structPtr == nil {
@@ -121,9 +121,9 @@ func (de *decoder) message(buf []byte, sval reflect.Value) error {
 		if err != nil {
 			if fieldi < len(fields) && fields[fieldi] != nil {
 				return fmt.Errorf("Error while decoding field %+v: %v", fields[fieldi].Field, err)
-			} else {
-				return err
 			}
+
+			return err
 		}
 		buf = rem
 
@@ -192,7 +192,7 @@ func (de *decoder) value(wiretype int, buf []byte,
 	return buf, nil
 }
 
-func (d *decoder) decodeSignedInt(wiretype int, v uint64) (int64, error) {
+func (de *decoder) decodeSignedInt(wiretype int, v uint64) (int64, error) {
 	if wiretype == 0 { // encoded as varint
 		sv := int64(v) >> 1
 		if v&1 != 0 {
@@ -315,18 +315,35 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 		}
 		return de.mapEntry(val, vb)
 	case reflect.Interface:
+		data := vb[:]
+
 		// Abstract field: instantiate via dynamic constructor.
 		if val.IsNil() {
-			val.Set(de.instantiate(val.Type()))
+			id := GeneratorID{}
+			var g InterfaceGeneratorFunc
+			if len(id) < len(vb) {
+				copy(id[:], vb[:len(id)])
+				g = generators.get(id)
+			}
+
+			if g == nil {
+				// Backwards compatible usage of the default constructors
+				val.Set(de.instantiate(val.Type()))
+			} else {
+				// As pointers to interface are discouraged in Go, we use
+				// the generator only for interface types
+				data = vb[len(id):]
+				val.Set(reflect.ValueOf(g()))
+			}
 		}
 
 		// If the object support self-decoding, use that.
 		if enc, ok := val.Interface().(encoding.BinaryUnmarshaler); ok {
 			if wiretype != 2 {
-				return errors.New(
-					"bad wiretype for bytes")
+				return errors.New("bad wiretype for bytes")
 			}
-			return enc.UnmarshalBinary(vb)
+
+			return enc.UnmarshalBinary(data)
 		}
 
 		// Decode into the object the interface points to.
