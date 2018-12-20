@@ -2,6 +2,8 @@ package protobuf
 
 import (
 	"encoding"
+	"errors"
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -250,4 +252,71 @@ func TestInterface(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, pp.P1.String(), dpp.P1.String())
 	require.Equal(t, pp.P2.String(), dpp.P2.String())
+}
+
+type dummyInterface interface {
+	String() string
+	encoding.BinaryUnmarshaler
+	InterfaceMarshaler
+}
+
+type dummyStruct struct{}
+
+func (ds *dummyStruct) String() string {
+	return "dummy"
+}
+
+func (ds *dummyStruct) MarshalBinary() ([]byte, error) {
+	return []byte{1, 2, 3}, nil
+}
+
+const unmarshalErr = "fail to unmarshal"
+
+func (ds *dummyStruct) UnmarshalBinary(data []byte) error {
+	return errors.New(unmarshalErr)
+}
+
+func (ds *dummyStruct) MarshalID() [8]byte {
+	return [8]byte{'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a'}
+}
+
+type dummyWrapper struct {
+	D dummyInterface
+}
+
+// TestInterface_UnknownType checks that proper errors are returned in
+// the worst case scenario
+func TestInterface_UnknownType(t *testing.T) {
+	w := &dummyWrapper{D: &dummyStruct{}}
+	buf, err := Encode(w)
+
+	// encoding doesn't fail because it's the default constructor case
+	require.NoError(t, err)
+	require.NotNil(t, buf)
+	require.Equal(t, "0a03010203", fmt.Sprintf("%x", buf))
+
+	var r dummyWrapper
+	err = Decode(buf, &r)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "no constructor")
+
+	// this time there is a tag at encoding time
+	RegisterInterface(func() interface{} { return &dummyStruct{} })
+	buf, err = Encode(w)
+	require.NoError(t, err)
+	require.NotNil(t, buf)
+	require.Equal(t, "0a0b6161616161616161010203", fmt.Sprintf("%x", buf))
+
+	// but the data is corrupted for some reason
+	err = Decode(buf, &r)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), unmarshalErr)
+
+	// but not at decoding time
+	generators = newInterfaceRegistry()
+
+	r = dummyWrapper{}
+	err = Decode(buf, &r)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "no constructor")
 }

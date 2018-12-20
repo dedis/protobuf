@@ -50,8 +50,15 @@ func Decode(buf []byte, structPtr interface{}) error {
 // constructors with which to instantiate interface types.
 func DecodeWithConstructors(buf []byte, structPtr interface{}, cons Constructors) (err error) {
 	defer func() {
-		if e := recover(); e != nil {
-			err = e.(error)
+		if r := recover(); r != nil {
+			switch e := r.(type) {
+			case string:
+				err = errors.New(e)
+			case error:
+				err = e
+			default:
+				err = errors.New("Failed to decode the field")
+			}
 		}
 	}()
 	if structPtr == nil {
