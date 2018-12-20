@@ -2,6 +2,7 @@ package protobuf
 
 import (
 	"encoding"
+	"errors"
 	"fmt"
 	"math/big"
 	"testing"
@@ -269,8 +270,10 @@ func (ds *dummyStruct) MarshalBinary() ([]byte, error) {
 	return []byte{1, 2, 3}, nil
 }
 
+const unmarshalErr = "fail to unmarshal"
+
 func (ds *dummyStruct) UnmarshalBinary(data []byte) error {
-	return nil
+	return errors.New(unmarshalErr)
 }
 
 func (ds *dummyStruct) MarshalID() [8]byte {
@@ -304,9 +307,15 @@ func TestInterface_UnknownType(t *testing.T) {
 	require.NotNil(t, buf)
 	require.Equal(t, "0a0b6161616161616161010203", fmt.Sprintf("%x", buf))
 
+	// but the data is corrupted for some reason
+	err = Decode(buf, &r)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), unmarshalErr)
+
 	// but not at decoding time
 	generators = newInterfaceRegistry()
 
+	r = dummyWrapper{}
 	err = Decode(buf, &r)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "no constructor")
