@@ -3,8 +3,9 @@
 Package protobuf implements Protocol Buffers reflectively using Go types to
 define message formats. This approach provides convenience similar to Gob
 encoding, but with a widely-used and language-neutral wire format.
-For detailed API documentation see http://godoc.org/github.com/DeDiS/protobuf.
-For general information on Protocol buffers see http://protobuf.googlecode.com.
+For detailed API documentation see https://godoc.org/go.dedis.ch/protobuf.
+For general information on Protocol buffers see
+https://developers.google.com/protocol-buffers.
 
 ## Features
 

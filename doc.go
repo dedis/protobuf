@@ -1,14 +1,15 @@
 // Package protobuf implements Protocol Buffers reflectively
 // using Go types to define message formats.
+//
 // This approach provides convenience similar to Gob encoding,
 // but with a widely-used and language-neutral wire format.
 // For general information on Protocol buffers see
-// http://protobuf.googlecode.com.
+// https://developers.google.com/protocol-buffers.
 //
 // In contrast with goprotobuf,
 // this package does not require users to write or compile .proto files;
 // you just define the message formats you want as Go struct types.
-// Consider for example this example message format definition
+// Consider this example message format definition
 // from the Protocol Buffers overview:
 //
 //	message Person {
@@ -31,7 +32,7 @@
 //	}
 //
 // The following Go type and const definitions express exactly the same format,
-// for purposes of encoding and decoding with this protobuf package:
+// for the purposes of encoding and decoding with this protobuf package:
 //
 //	type Person struct {
 //		Name  string
@@ -152,5 +153,5 @@
 // we could in principle achieve that by adding a "Go-format"
 // message format compiler frontend to goprotobuf or gogoprotobuf -
 // but we leave this as an exercise for the reader.
-//
+
 package protobuf

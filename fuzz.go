@@ -1,11 +1,10 @@
 // To fuzz-test this package:
 //
-//   $ go get github.com/dvyukov/go-fuzz/go-fuzz
-//   $ go get github.com/dvyukov/go-fuzz/go-fuzz-build
-//   $ go-fuzz-build github.com/dedis/protobuf
+//   $ go get -u github.com/dvyukov/go-fuzz/go-fuzz
+//   $ go get -u github.com/dvyukov/go-fuzz/go-fuzz-build
+//   $ cd `go env GOPATH`
+//   $ go-fuzz-build go.dedis.ch/protobuf
 //   $ go-fuzz -workdir=workdir -bin protobuf-fuzz.zip
-//
-// See also: https://medium.com/@dgryski/go-fuzz-github-com-arolek-ase-3c74d5a3150c
 
 // +build gofuzz
 
