@@ -320,3 +320,39 @@ func TestInterface_UnknownType(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "no constructor")
 }
+
+type Cid struct{ str string }
+
+type Block struct {
+	Cid Cid
+	A   int
+}
+
+func (c Cid) MarshalBinary() ([]byte, error) {
+	return []byte(c.str), nil
+}
+
+func (c *Cid) UnmarshalBinary(data []byte) error {
+	c.str = string(data)
+	return nil
+}
+
+func TestBinaryMarshalerStruct(t *testing.T) {
+	c1 := Cid{"1234"}
+	buf, err := Encode(&c1)
+	assert.Nil(t, err)
+
+	c2 := Cid{}
+	err = Decode(buf, &c2)
+	assert.Nil(t, err)
+	assert.Equal(t, c1, c2)
+
+	b1 := Block{Cid: Cid{"1234"}, A: 4}
+	buf, err = Encode(&b1)
+	assert.Nil(t, err)
+
+	b2 := Block{}
+	err = Decode(buf, &b2)
+	assert.Nil(t, err)
+	assert.Equal(t, b1, b2)
+}
