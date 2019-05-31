@@ -292,6 +292,8 @@ func (de *decoder) putvalue(wiretype int, val reflect.Value,
 			t := time.Unix(sv/int64(time.Second), sv%int64(time.Second))
 			val.Set(reflect.ValueOf(t))
 			return nil
+		} else if enc, ok := val.Addr().Interface().(encoding.BinaryUnmarshaler); ok {
+			return enc.UnmarshalBinary(vb[:])
 		}
 		if wiretype != 2 {
 			return errors.New("bad wiretype for embedded message")

@@ -218,14 +218,23 @@ func (en *encoder) value(key uint64, val reflect.Value, prefix TagPrefix) {
 		en.Write(b)
 
 	case reflect.Struct:
-		// Embedded messages.
-		en.uvarint(key | 2)
-		emb := encoder{}
-		emb.message(val)
-		b := emb.Bytes()
-		en.uvarint(uint64(len(b)))
-		en.Write(b)
-
+		if enc, ok := val.Interface().(encoding.BinaryMarshaler); ok {
+			en.uvarint(key | 2)
+			b, err := enc.MarshalBinary()
+			if err != nil {
+				panic(err.Error())
+			}
+			en.uvarint(uint64(len(b)))
+			en.Write(b)
+		} else {
+			// Embedded messages.
+			en.uvarint(key | 2)
+			emb := encoder{}
+			emb.message(val)
+			b := emb.Bytes()
+			en.uvarint(uint64(len(b)))
+			en.Write(b)
+		}
 	case reflect.Slice, reflect.Array:
 		// Length-delimited slices or byte-vectors.
 		en.slice(key, val)
