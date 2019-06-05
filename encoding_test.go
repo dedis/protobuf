@@ -320,3 +320,35 @@ func TestInterface_UnknownType(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "no constructor")
 }
+
+// a type that can marshal itself, to be used inside of another struct
+type canMarshal struct{ private string }
+
+type hasInternalCanMarshal struct {
+	CM            canMarshal
+	SomethingElse int
+}
+
+func (cm canMarshal) MarshalBinary() ([]byte, error) {
+	return []byte(cm.private), nil
+}
+
+func (cm *canMarshal) UnmarshalBinary(data []byte) error {
+	cm.private = string(data)
+	return nil
+}
+
+func Test_InternalStructMarshal(t *testing.T) {
+	v := hasInternalCanMarshal{
+		CM:            canMarshal{private: "hello nurse"},
+		SomethingElse: 99,
+	}
+	var v2 hasInternalCanMarshal
+
+	buf, err := Encode(&v)
+	assert.NoError(t, err)
+	err = Decode(buf, &v2)
+	assert.NoError(t, err)
+
+	assert.Equal(t, v, v2)
+}
