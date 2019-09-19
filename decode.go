@@ -87,6 +87,7 @@ func (de *decoder) message(buf []byte, sval reflect.Value) error {
 	// Decode all the fields
 	fields := ProtoFields(sval.Type())
 	fieldi := 0
+	prevFieldi := -1
 	for len(buf) > 0 {
 		// Parse the key
 		key, n := binary.Uvarint(buf)
@@ -119,6 +120,15 @@ func (de *decoder) message(buf []byte, sval reflect.Value) error {
 			}
 		}
 
+		// For repeated field as slice, we make sure the provided slice
+		// is empty as an append is performed later on instead of direct
+		// indexing.
+		// It's important to only reset the length on the first repeated
+		// field.
+		if field.Kind() == reflect.Slice && prevFieldi != fieldi {
+			field.SetLen(0)
+		}
+
 		// For more debugging output, uncomment the following three lines.
 		// if fieldi < len(fields){
 		//   fmt.Printf("Decoding FieldName %+v\n", fields[fieldi].Field)
@@ -134,6 +144,7 @@ func (de *decoder) message(buf []byte, sval reflect.Value) error {
 		}
 		buf = rem
 
+		prevFieldi = fieldi
 	}
 	return nil
 }

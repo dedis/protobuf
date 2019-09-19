@@ -163,7 +163,34 @@ func TestProtobuf(t *testing.T) {
 	t2 := test{}
 	err = Decode(buf, &t2)
 	assert.NoError(t, err)
-	assert.Equal(t, t2, t1)
+	assert.Equal(t, t1, t2)
+}
+
+type simpleFilledInput struct {
+	AA []mybytes
+	I  string
+	BB []mybytes
+}
+
+func TestProtobuf_FilledInput(t *testing.T) {
+
+	t1 := simpleFilledInput{
+		[]mybytes{[]byte("the"), []byte("quick"), []byte("brown"), []byte("fox")},
+		"intermediate value",
+		[]mybytes{[]byte("the"), []byte("quick"), []byte("brown"), []byte("fox")},
+	}
+	buf, err := Encode(&t1)
+	assert.NoError(t, err)
+
+	t2 := simpleFilledInput{
+		[]mybytes{[]byte("the"), []byte("quick"), []byte("brown"), []byte("fox")},
+		"intermediate value",
+		[]mybytes{[]byte("the"), []byte("quick"), []byte("brown"), []byte("fox")},
+	}
+	err = Decode(buf, &t2)
+	assert.NoError(t, err)
+
+	assert.Equal(t, t1, t2)
 }
 
 type padded struct {
