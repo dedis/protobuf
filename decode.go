@@ -84,6 +84,19 @@ func (de *decoder) message(buf []byte, sval reflect.Value) error {
 	if sval.Kind() != reflect.Struct {
 		return errors.New("not a struct")
 	}
+
+	for i := 0; i < sval.NumField(); i++ {
+		switch field := sval.Field(i); field.Kind() {
+		case reflect.Interface:
+			// Interface are not reset because the decoder won't
+			// be able to instantiate it again in some scenarios.
+		default:
+			if field.CanSet() {
+				field.Set(reflect.Zero(field.Type()))
+			}
+		}
+	}
+
 	// Decode all the fields
 	fields := ProtoFields(sval.Type())
 	fieldi := 0
@@ -133,7 +146,6 @@ func (de *decoder) message(buf []byte, sval reflect.Value) error {
 			return err
 		}
 		buf = rem
-
 	}
 	return nil
 }
