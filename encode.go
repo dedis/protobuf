@@ -41,7 +41,7 @@ type encoder struct {
 func Encode(structPtr interface{}) (bytes []byte, err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = errors.New(e.(string))
+			err = fmt.Errorf("%v", e)
 			bytes = nil
 		}
 	}()
