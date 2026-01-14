@@ -227,7 +227,7 @@ func TestArrayKey(t *testing.T) {
 	assert.False(t, t1.M[k3])
 }
 
-func TestInterface(t *testing.T) {
+func TestPointInterface(t *testing.T) {
 	type Points struct {
 		P1 kyber.Point
 		P2 kyber.Point
@@ -252,6 +252,35 @@ func TestInterface(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, pp.P1.String(), dpp.P1.String())
 	require.Equal(t, pp.P2.String(), dpp.P2.String())
+}
+
+func TestScalarInterface(t *testing.T) {
+	ed25519 := suites.MustFind("ed25519")
+
+	RegisterInterface(func() interface{} { return ed25519.Scalar() })
+	//	RegisterInterface(func() interface{} { return ed25519.ScalarLen() })
+
+	type BasicSig struct {
+		C kyber.Scalar
+		R kyber.Scalar
+	}
+
+	pseudoRand := ed25519.XOF([]byte("test scalar interface"))
+
+	sig := BasicSig{
+		C: ed25519.Scalar().Pick(pseudoRand),
+		R: ed25519.Scalar().Pick(pseudoRand),
+	}
+
+	buf, err := Encode(&sig)
+	require.NoError(t, err)
+
+	var dsig BasicSig
+	err = Decode(buf, &dsig)
+	require.NoError(t, err)
+
+	require.Equal(t, sig.C.String(), dsig.C.String())
+	require.Equal(t, sig.R.String(), dsig.R.String())
 }
 
 type dummyInterface interface {
