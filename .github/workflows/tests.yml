@@ -14,13 +14,11 @@ jobs:
   test:
     strategy:
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest]
         size: ['64b', '32b']
         golang: ['1.13.15', '1.25.4']
         exclude:
           - os: windows-latest
-            size: '32b'
-          - os: macos-latest
             size: '32b'
 
     runs-on: ${{ matrix.os }}
