@@ -64,6 +64,6 @@ jobs:
         wget -O go.tgz -nv https://go.dev/dl/go${{matrix.golang}}.linux-386.tar.gz
         tar -xzf go.tgz
         export PATH=$PATH:$(pwd)/go/bin
-        cd kyber
+        cd protobuf
         make test
       shell: alpine.sh {0}
