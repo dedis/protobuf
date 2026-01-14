@@ -9,7 +9,8 @@ lint: tidy
 	golangci-lint run
 
 test: tidy
-	go test ./...
+	export GOARCH='amd64' && go test ./...
+	export GOARCH='386' && go test ./...
 
 # target to run all the possible checks; it's a good habit to run it before
 # pushing code

@@ -2,6 +2,7 @@ package protobuf
 
 import (
 	"encoding/hex"
+	"math"
 	"reflect"
 	"testing"
 
@@ -26,7 +27,7 @@ type ArrayTest3 struct {
 
 func TestArray(t *testing.T) {
 	// largest int32 is 2147483647
-	var large int = 3147483647
+	var large int = math.MaxInt32 - 1
 
 	a0 := ArrayTest0{[]int{1, 1, large}}
 	a1 := ArrayTest1{[]int64{1, 1, 1}}
